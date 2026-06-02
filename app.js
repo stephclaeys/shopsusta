@@ -322,14 +322,14 @@ async function initShopCount() {
     // Always query by id — reliable fallback, click_count column may not exist yet
     let data = null;
     try {
-      const r1 = await sb.from('products').select('*').order('click_count', { ascending: false });
+      const r1 = await sb.from('products').select('*').eq('visible', true).order('click_count', { ascending: false });
       if (!r1.error && r1.data) data = r1.data;
     } catch(e) {}
 
     // Fallback to ordering by id if click_count failed or returned nothing
     if (!data) {
       try {
-        const r2 = await sb.from('products').select('*').order('id');
+        const r2 = await sb.from('products').select('*').eq('visible', true).order('id');
         if (!r2.error && r2.data) data = r2.data;
       } catch(e) {}
     }
@@ -595,6 +595,7 @@ async function loadEditProducts(key) {
     .from('edit_products')
     .select('product_id, sort_order, products(*)')
     .eq('edit_id', edit.id)
+    .eq('products.visible', true)
     .order('sort_order');
 
   if (error || !data || !data.length) {
@@ -991,7 +992,7 @@ function showBrandDetail(brandKey) {
   document.getElementById('bdNoResults').style.display = 'none';
 
   // Query Supabase directly — avoids dataset encoding issues entirely
-  sb.from('products').select('*').eq('brand', brandKey).order('click_count', { ascending: false })
+  sb.from('products').select('*').eq('brand', brandKey).eq('visible', true).order('click_count', { ascending: false })
     .then(({ data: products, error }) => {
       if (error || !products) {
         grid.innerHTML = '';
