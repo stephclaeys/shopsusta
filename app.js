@@ -473,6 +473,19 @@ async function loadEdits() {
   buildHomeSlider();
   buildMegaMenuEdits();
   buildEditPages();
+  buildSidebarEdits();
+}
+
+// ── Sidebar edits list — mirrors active edits from DB ──
+function buildSidebarEdits() {
+  const section = document.getElementById('sidebarEditsSection');
+  const links   = document.getElementById('sidebarEditLinks');
+  if (!section || !links) return;
+  if (!_edits.length) { section.style.display = 'none'; return; }
+  links.innerHTML = _edits.map(edit =>
+    `<span class="sidebar-link" onclick="showEditPage('${edit.key}')">${edit.name}</span>`
+  ).join('');
+  section.style.display = '';
 }
 
 // ── Home slider ───────────────────────────

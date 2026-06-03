@@ -365,12 +365,10 @@
       <div class="sidebar-active-filters" id="sidebarActiveTags"></div>
       <button class="sidebar-clear-btn" id="sidebarClearBtn" onclick="clearSidebarFilters()">Clear all filters</button>
 
-      <!-- Edits -->
-      <div class="sidebar-section" style="padding:16px 28px 8px;">
+      <!-- Edits — populated dynamically from DB by buildSidebarEdits() -->
+      <div class="sidebar-section" id="sidebarEditsSection" style="padding:16px 28px 8px; display:none;">
         <p class="sidebar-title">Edits</p>
-        <span class="sidebar-link" id="sb-edits" onclick="showEditPage('bestdressed')">Best Dressed Guest</span>
-        <span class="sidebar-link" onclick="showEditPage('eurosummer')">Euro Summer</span>
-        <span class="sidebar-link" onclick="showEditPage('onabeach')">On a Beach</span>
+        <div id="sidebarEditLinks"></div>
       </div>
       <div class="sidebar-divider"></div>
 

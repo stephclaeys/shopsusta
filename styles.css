@@ -731,6 +731,25 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
 .mobile-filter-btn:hover { border-color: var(--dark); color: var(--dark); }
 .mobile-filter-active { font-size: 11px; color: var(--taupe); font-style: italic; }
 
+/* ── Filter button in cat-bar (mobile only) ── */
+.cat-bar-filter-btn {
+  display: none; /* shown only in mobile media query */
+  align-items: center; gap: 6px; flex-shrink: 0;
+  padding: 0 16px; margin: 0;
+  background: none; border: none; border-right: 0.5px solid var(--stone);
+  font-family: var(--sans); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--mid);
+  cursor: pointer; transition: color 0.2s; white-space: nowrap;
+  align-self: stretch;
+}
+.cat-bar-filter-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+.cat-bar-filter-btn:hover { color: var(--accent); }
+
+/* ── Sidebar drawer header (mobile only) ── */
+.sidebar-drawer-header {
+  display: none; /* shown only in mobile media query */
+}
+
 /* ════════════════════════════════════════════════
    MEDIA QUERIES — TABLET (≤1024px)
 ════════════════════════════════════════════════ */
@@ -784,9 +803,10 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
   /* ── Shop layout ── */
   .shop-layout { grid-template-columns: 1fr; }
   .shop-sidebar {
-    position: fixed; top: 0; left: -100%; width: 80vw; max-width: 320px;
+    position: fixed; top: 0; left: -100%; width: 82vw; max-width: 320px;
     height: 100vh; z-index: 600; transition: left 0.32s cubic-bezier(0.4,0,0.2,1);
-    border-right: 0.5px solid var(--stone); padding-top: 72px;
+    border-right: 0.5px solid var(--stone); padding-top: 0;
+    display: flex; flex-direction: column;
   }
   .shop-sidebar.mobile-open { left: 0; }
   .shop-sidebar-backdrop {
@@ -794,6 +814,27 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
     z-index: 590; display: none;
   }
   .shop-sidebar-backdrop.open { display: block; }
+  /* Show the drawer header on mobile */
+  .sidebar-drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px 16px; border-bottom: 0.5px solid var(--stone);
+    flex-shrink: 0;
+  }
+  .sidebar-drawer-title {
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--dark); font-weight: 500; font-family: var(--sans);
+  }
+  .sidebar-drawer-close {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; cursor: pointer;
+    font-family: var(--sans); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--taupe); transition: color 0.2s;
+  }
+  .sidebar-drawer-close svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .sidebar-drawer-close:hover { color: var(--dark); }
+  /* Cat-bar: remove 240px desktop offset, show filter button */
+  .shop-cat-bar { padding: 0 !important; }
+  .cat-bar-filter-btn { display: flex; }
   .shop-main { padding: 24px 20px 64px; }
   .product-grid { grid-template-columns: repeat(3, 1fr); gap: 2px; }
   .shop-title { font-size: 22px; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; }
