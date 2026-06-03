@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Susta Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0f0d0c; --surface: #1a1614; --surface2: #231e1c;
+  --border: #2e2826; --accent: #d10a32; --accent2: #a00826;
+  --text: #f0ede8; --text2: #a09088; --text3: #6a5e58;
+  --green: #3a7a3a; --green-light: #d6e8cc;
+  --sans: 'DM Sans', sans-serif;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; font-size: 13px; overflow-x: hidden; }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+button { font-family: var(--sans); cursor: pointer; }
+input, textarea, select { font-family: var(--sans); }
+
+/* ── LOGIN ── */
+#loginScreen {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.login-box { width: 320px; text-align: center; }
+.login-logo { font-size: 11px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.login-sub { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 40px; }
+.login-input {
+  width: 100%; padding: 12px 16px; background: var(--surface);
+  border: 0.5px solid var(--border); color: var(--text);
+  font-size: 14px; font-weight: 300; outline: none; margin-bottom: 12px;
+  transition: border-color 0.2s;
+}
+.login-input:focus { border-color: var(--text3); }
+.login-btn {
+  width: 100%; padding: 13px; background: var(--accent); color: #fff;
+  border: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  font-weight: 500; transition: background 0.2s;
+}
+.login-btn:hover { background: var(--accent2); }
+.login-error { font-size: 11px; color: var(--accent); margin-top: 10px; min-height: 16px; }
+
+/* ── LAYOUT ── */
+#app { display: none; height: 100vh; display: none; flex-direction: column; }
+#app.visible { display: flex; }
+.topbar {
+  height: 52px; background: var(--surface); border-bottom: 0.5px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; flex-shrink: 0; position: sticky; top: 0; z-index: 100;
+}
+.topbar-logo { font-size: 10px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; color: var(--accent); }
+.topbar-nav { display: flex; gap: 4px; }
+.tab-btn {
+  padding: 6px 14px; background: none; border: none;
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); transition: all 0.15s; border-radius: 2px;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface2); }
+.tab-btn.active { color: var(--text); background: var(--surface2); }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-right span { font-size: 10px; color: var(--text3); letter-spacing: 0.06em; }
+.logout-btn { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 5px 10px; transition: all 0.15s; }
+.logout-btn:hover { color: var(--text); border-color: var(--text3); }
+
+.main { flex: 1; overflow-y: auto; }
+.tab-panel { display: none; padding: 28px 24px 80px; max-width: 1400px; }
+.tab-panel.active { display: block; }
+
+/* ── PRODUCTS TAB ── */
+.filter-bar {
+  display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
+}
+.search-input {
+  flex: 1; min-width: 200px; padding: 9px 14px;
+  background: var(--surface); border: 0.5px solid var(--border);
+  color: var(--text); font-size: 12px; outline: none; transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--text3); }
+.filter-select {
+  padding: 9px 12px; background: var(--surface); border: 0.5px solid var(--border);
+  color: var(--text2); font-size: 11px; outline: none; cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.filter-select option { background: var(--surface2); }
+.filter-toggle {
+  padding: 8px 14px; background: none; border: 0.5px solid var(--border);
+  color: var(--text3); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  transition: all 0.15s;
+}
+.filter-toggle:hover, .filter-toggle.active { border-color: var(--accent); color: var(--accent); }
+.product-count { font-size: 10px; color: var(--text3); letter-spacing: 0.08em; margin-left: auto; }
+
+.product-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 2px;
+}
+.product-thumb {
+  position: relative; aspect-ratio: 3/4; background: var(--surface);
+  cursor: pointer; overflow: hidden; group;
+}
+.product-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+.product-thumb:hover img { transform: scale(1.04); }
+.product-thumb-overlay {
+  position: absolute; inset: 0; background: rgba(15,13,12,0); transition: background 0.2s;
+  display: flex; flex-direction: column; justify-content: flex-end; padding: 12px;
+}
+.product-thumb:hover .product-thumb-overlay { background: rgba(15,13,12,0.6); }
+.product-thumb-name { font-size: 11px; font-weight: 400; color: #fff; line-height: 1.3; opacity: 0; transition: opacity 0.2s; }
+.product-thumb:hover .product-thumb-name { opacity: 1; }
+.product-thumb-brand { font-size: 9px; color: rgba(255,255,255,0.6); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; opacity: 0; transition: opacity 0.2s; }
+.product-thumb:hover .product-thumb-brand { opacity: 1; }
+.hidden-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--accent); color: #fff;
+  font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 6px; font-weight: 500;
+}
+.no-img-placeholder {
+  width: 100%; height: 100%; background: var(--surface2);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+}
+.no-img-placeholder span { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); text-align: center; padding: 0 8px; }
+
+/* ── PRODUCT DRAWER ── */
+.drawer-backdrop {
+  position: fixed; inset: 0; background: rgba(15,13,12,0.7);
+  z-index: 200; display: none;
+}
+.drawer-backdrop.open { display: block; }
+.drawer {
+  position: fixed; top: 0; right: -560px; width: 520px; max-width: 96vw;
+  height: 100vh; background: var(--surface); border-left: 0.5px solid var(--border);
+  z-index: 300; transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.drawer.open { right: 0; }
+.drawer-header {
+  padding: 20px 24px 16px; border-bottom: 0.5px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0;
+}
+.drawer-title { font-size: 15px; font-weight: 400; line-height: 1.3; max-width: 340px; }
+.drawer-brand { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-top: 3px; }
+.drawer-close { background: none; border: none; color: var(--text3); font-size: 18px; padding: 0; line-height: 1; transition: color 0.15s; }
+.drawer-close:hover { color: var(--text); }
+.drawer-body { flex: 1; overflow-y: auto; padding: 20px 24px 32px; }
+.drawer-img { width: 100%; aspect-ratio: 3/4; object-fit: cover; background: var(--surface2); margin-bottom: 20px; display: block; }
+.drawer-img-placeholder { width: 100%; aspect-ratio: 3/4; background: var(--surface2); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+.drawer-img-placeholder span { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+
+.field-group { margin-bottom: 20px; }
+.field-label { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; display: block; }
+.field-input {
+  width: 100%; padding: 9px 12px; background: var(--bg);
+  border: 0.5px solid var(--border); color: var(--text);
+  font-size: 12px; outline: none; transition: border-color 0.2s;
+}
+.field-input:focus { border-color: var(--text3); }
+
+.pill-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill {
+  padding: 5px 12px; border: 0.5px solid var(--border);
+  font-size: 10px; letter-spacing: 0.06em; color: var(--text3);
+  cursor: pointer; transition: all 0.15s; background: none;
+  text-transform: none;
+}
+.pill:hover { border-color: var(--text3); color: var(--text); }
+.pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pill.active-green { background: var(--green); border-color: var(--green); color: var(--green-light); }
+
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+.toggle-row:last-child { border-bottom: none; }
+.toggle-label { font-size: 12px; color: var(--text2); }
+.toggle-switch { position: relative; width: 36px; height: 20px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; inset: 0; background: var(--border); cursor: pointer;
+  border-radius: 10px; transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; height: 14px; width: 14px;
+  left: 3px; bottom: 3px; background: var(--text3);
+  border-radius: 50%; transition: all 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); background: #fff; }
+
+.edit-check-list { display: flex; flex-direction: column; gap: 6px; }
+.edit-check-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: var(--bg); border: 0.5px solid var(--border); cursor: pointer;
+  transition: border-color 0.15s;
+}
+.edit-check-item:hover { border-color: var(--text3); }
+.edit-check-item.active { border-color: var(--accent); }
+.edit-check-box { width: 14px; height: 14px; border: 0.5px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.edit-check-item.active .edit-check-box { background: var(--accent); border-color: var(--accent); }
+.edit-check-item.active .edit-check-box::after { content: '✓'; font-size: 9px; color: #fff; }
+.edit-check-name { font-size: 12px; color: var(--text2); }
+.edit-check-item.active .edit-check-name { color: var(--text); }
+
+.drawer-save-bar {
+  padding: 16px 24px; border-top: 0.5px solid var(--border);
+  display: flex; gap: 10px; flex-shrink: 0; background: var(--surface);
+}
+.btn-save {
+  flex: 1; padding: 12px; background: var(--accent); color: #fff; border: none;
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500;
+  transition: background 0.2s;
+}
+.btn-save:hover { background: var(--accent2); }
+.btn-save:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
+.btn-cancel { padding: 12px 20px; background: none; border: 0.5px solid var(--border); color: var(--text3); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; transition: all 0.15s; }
+.btn-cancel:hover { border-color: var(--text3); color: var(--text); }
+.save-msg { font-size: 10px; color: var(--green-light); align-self: center; display: none; }
+.save-msg.visible { display: block; }
+.save-msg.error { color: var(--accent); }
+
+/* ── EDITS TAB ── */
+.edits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.edit-card { background: var(--surface); border: 0.5px solid var(--border); padding: 20px; }
+.edit-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.edit-card-name { font-size: 15px; font-weight: 400; }
+.edit-card-key { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-top: 3px; }
+.edit-status { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; }
+.edit-status.live { background: rgba(58,122,58,0.2); color: var(--green-light); }
+.edit-status.hidden { background: rgba(209,10,50,0.15); color: #f08090; }
+.edit-card-desc { font-size: 11px; color: var(--text3); line-height: 1.7; margin-bottom: 16px; }
+.edit-card-actions { display: flex; gap: 8px; }
+.edit-action-btn { flex: 1; padding: 8px; border: 0.5px solid var(--border); background: none; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); transition: all 0.15s; }
+.edit-action-btn:hover { border-color: var(--text3); color: var(--text); }
+.edit-action-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.edit-action-btn.primary:hover { background: var(--accent2); }
+
+/* ── NOTES TAB ── */
+.notes-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+@media (max-width: 700px) { .notes-layout { grid-template-columns: 1fr; } }
+.note-compose { background: var(--surface); border: 0.5px solid var(--border); padding: 20px; }
+.note-compose-label { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; display: block; }
+.note-textarea {
+  width: 100%; min-height: 160px; padding: 12px; background: var(--bg);
+  border: 0.5px solid var(--border); color: var(--text); font-size: 13px;
+  font-weight: 300; line-height: 1.7; resize: vertical; outline: none;
+  transition: border-color 0.2s; margin-bottom: 12px;
+}
+.note-textarea:focus { border-color: var(--text3); }
+.note-submit { width: 100%; padding: 11px; background: var(--accent); color: #fff; border: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; transition: background 0.2s; }
+.note-submit:hover { background: var(--accent2); }
+.note-submit:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
+.note-confirm { font-size: 11px; color: var(--green-light); margin-top: 10px; display: none; }
+.note-confirm.visible { display: block; }
+
+.notes-list { display: flex; flex-direction: column; gap: 10px; }
+.notes-list-label { font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text3); margin-bottom: 4px; }
+.note-item { background: var(--surface); border: 0.5px solid var(--border); padding: 16px; }
+.note-item-date { font-size: 9px; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 8px; }
+.note-item-body { font-size: 12px; color: var(--text2); line-height: 1.7; white-space: pre-wrap; }
+.notes-empty { font-size: 12px; color: var(--text3); padding: 24px 0; }
+
+/* ── SECTION HEADERS ── */
+.section-header { margin-bottom: 20px; }
+.section-title { font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text2); }
+.section-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+/* ── LOADING / STATES ── */
+.loading { padding: 48px; text-align: center; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+.divider { height: 0.5px; background: var(--border); margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen">
+  <div class="login-box">
+    <p class="login-logo">SUSTA</p>
+    <p class="login-sub">Admin</p>
+    <input type="password" class="login-input" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Enter</button>
+    <p class="login-error" id="loginError"></p>
+  </div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+  <div class="topbar">
+    <span class="topbar-logo">SUSTA — Admin</span>
+    <div class="topbar-nav">
+      <button class="tab-btn active" onclick="switchTab('products',this)">Products</button>
+      <button class="tab-btn" onclick="switchTab('edits',this)">Edits</button>
+      <button class="tab-btn" onclick="switchTab('notes',this)">Notes</button>
+    </div>
+    <div class="topbar-right">
+      <span id="productCountLabel"></span>
+      <button class="logout-btn" onclick="doLogout()">Log out</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ════════ PRODUCTS TAB ════════ -->
+    <div class="tab-panel active" id="panel-products">
+      <div class="filter-bar">
+        <input type="text" class="search-input" id="searchInput" placeholder="Search products…" oninput="filterProducts()">
+        <select class="filter-select" id="filterBrand" onchange="filterProducts()">
+          <option value="">All brands</option>
+        </select>
+        <select class="filter-select" id="filterCat" onchange="filterProducts()">
+          <option value="">All categories</option>
+          <option value="dresses">Dresses</option>
+          <option value="tops">Tops</option>
+          <option value="bottoms">Bottoms</option>
+          <option value="denim">Denim</option>
+          <option value="skirts">Skirts</option>
+          <option value="outerwear">Outerwear</option>
+          <option value="swim">Swim</option>
+          <option value="shoes">Shoes</option>
+          <option value="accessories">Accessories</option>
+        </select>
+        <button class="filter-toggle" id="toggleHidden" onclick="toggleShowHidden()">Show hidden</button>
+        <span class="product-count" id="productCount"></span>
+      </div>
+      <div class="product-grid" id="productGrid">
+        <div class="loading">Loading products…</div>
+      </div>
+    </div>
+
+    <!-- ════════ EDITS TAB ════════ -->
+    <div class="tab-panel" id="panel-edits">
+      <div class="section-header">
+        <p class="section-title">Edits</p>
+        <p class="section-sub">Toggle edits on/off and manage which products are included</p>
+      </div>
+      <div class="edits-grid" id="editsGrid">
+        <div class="loading">Loading edits…</div>
+      </div>
+    </div>
+
+    <!-- ════════ NOTES TAB ════════ -->
+    <div class="tab-panel" id="panel-notes">
+      <div class="section-header">
+        <p class="section-title">Notes</p>
+        <p class="section-sub">Jot down anything — ideas, reminders, things to do. Saved to Supabase.</p>
+      </div>
+      <div class="notes-layout">
+        <div class="note-compose">
+          <span class="note-compose-label">New note</span>
+          <textarea class="note-textarea" id="noteText" placeholder="What's on your mind…"></textarea>
+          <button class="note-submit" id="noteSubmitBtn" onclick="submitNote()">Save note</button>
+          <p class="note-confirm" id="noteConfirm">✓ Saved to Supabase</p>
+        </div>
+        <div>
+          <p class="notes-list-label" style="margin-bottom:12px">Previous notes</p>
+          <div class="notes-list" id="notesList">
+            <p class="notes-empty">Loading…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── PRODUCT DRAWER ── -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div>
+      <p class="drawer-title" id="drawerTitle"></p>
+      <p class="drawer-brand" id="drawerBrand"></p>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-save-bar">
+    <button class="btn-save" id="saveBtn" onclick="saveProduct()">Save changes</button>
+    <button class="btn-cancel" onclick="closeDrawer()">Cancel</button>
+    <span class="save-msg" id="saveMsg"></span>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const ADMIN_PASSWORD = 'shopSUSTA1!';
+const SUPABASE_URL   = 'https://yhpqdtrfkriwaiqfyhzk.supabase.co';
+const SUPABASE_ANON  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlocHFkdHJma3Jpd2FpcWZ5aHprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0ODg5ODUsImV4cCI6MjA5NTA2NDk4NX0.nHu5BDCPXfhQx6hRrtCW9cb2j36H1BkghbOZ6igou9M';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ── DATA ──
+const BRAND_LABELS = {
+  afends:'Afends', agazi:'Agazi', allblues:'All Blues', anothertomorrow:'Another Tomorrow',
+  bastetnoir:'Bastet Noir', borneo:'Borneo Paris', charleeswim:'Charlee Swim',
+  christydawn:'Christy Dawn', ftccashmere:'FTC Cashmere', jiwya:'Jiwya',
+  lauralombardi:'Laura Lombardi', mightygoodbasics:'Mighty Good Basics',
+  modallica:'Modallica', mpdenmark:'MP Denmark', mud:'MUD Jeans',
+  nudiejeans:'Nudie Jeans', ninetypercent:'Ninety Percent', olistic:'Olistic the Label',
+  omnes:'Omnes', outlanddenim:'Outland Denim', redrew:'Redrew', reformation:'Reformation',
+  sabinamotasem:'Sabina Motasem', serpentandtheswan:'Serpent & the Swan',
+  silentwaveindigo:'Silent Wave Indigo', souldaze:'Souldaze', spell:'Spell',
+  teatumjones:'Tea Tum Jones', theglade:'The Glade', theknottyones:'The Knotty Ones',
+  ninteypercent:'Ninety Percent',
+};
+
+const STYLE_OPTIONS = {
+  dresses:    ['Mini','Midi','Maxi'],
+  tops:       ['Tank','Short Sleeve','Long Sleeve','Sleeveless'],
+  bottoms:    ['Long','Shorts'],
+  skirts:     ['Mini','Midi','Maxi'],
+  denim:      ['Long','Shorts'],
+  swim:       ['Bikini','One Piece'],
+  outerwear:  ['Jackets','Hoodies','Sweaters'],
+  shoes:      ['Sandal','Ballet Flat','Loafer','Boot','Sneaker'],
+  accessories:['Necklace','Earrings','Ring','Bracelet','Bag','Sunglasses','Hair','Other'],
+};
+
+const OCCASIONS   = ['Everyday','Summer','Formal','Wedding Guest','Beach','Active'];
+const COLOURS     = ['black','white','grey','tan','red','pink','orange','yellow','green','blue','purple'];
+const COLOUR_HEX  = { black:'#1a1a1a', white:'#f5f5f5', grey:'#9e9e9e', tan:'#c8a882', red:'#c1302a', pink:'#e8748a', orange:'#e07830', yellow:'#e8c840', green:'#4a7a4a', blue:'#3a6fad', purple:'#7a4a8a' };
+const CATEGORIES  = ['dresses','tops','bottoms','denim','skirts','outerwear','swim','shoes','accessories'];
+const TAG_TYPES   = ['eco','standard'];
+
+let _allProducts  = [];
+let _allEdits     = [];
+let _showHidden   = false;
+let _editingId    = null;
+let _pendingChanges = {};
+
+// ── LOGIN ──
+function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (pw === ADMIN_PASSWORD) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').classList.add('visible');
+    init();
+  } else {
+    document.getElementById('loginError').textContent = 'Incorrect password.';
+    document.getElementById('pwInput').value = '';
+  }
+}
+
+function doLogout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('pwInput').value = '';
+}
+
+// ── TABS ──
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── INIT ──
+async function init() {
+  await Promise.all([loadProducts(), loadEdits(), loadNotes()]);
+  populateBrandFilter();
+}
+
+// ── PRODUCTS ──
+async function loadProducts() {
+  const { data, error } = await sb.from('products').select('*').order('id');
+  if (error || !data) return;
+  _allProducts = data;
+  document.getElementById('productCountLabel').textContent = data.length + ' products';
+  renderProductGrid();
+}
+
+function populateBrandFilter() {
+  const brands = [...new Set(_allProducts.map(p => p.brand))].sort();
+  const sel = document.getElementById('filterBrand');
+  brands.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = BRAND_LABELS[b] || b;
+    sel.appendChild(opt);
+  });
+}
+
+function filterProducts() {
+  const q      = document.getElementById('searchInput').value.toLowerCase();
+  const brand  = document.getElementById('filterBrand').value;
+  const cat    = document.getElementById('filterCat').value;
+
+  let filtered = _allProducts.filter(p => {
+    if (!_showHidden && p.visible === false) return false;
+    if (brand && p.brand !== brand) return false;
+    if (cat && p.category !== cat) return false;
+    if (q) {
+      const hay = (p.name + ' ' + (BRAND_LABELS[p.brand] || p.brand)).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('productCount').textContent = filtered.length + ' shown';
+  renderProductGrid(filtered);
+}
+
+function toggleShowHidden() {
+  _showHidden = !_showHidden;
+  document.getElementById('toggleHidden').classList.toggle('active', _showHidden);
+  filterProducts();
+}
+
+function renderProductGrid(products) {
+  const list = products !== undefined ? products : _allProducts;
+  const grid = document.getElementById('productGrid');
+  if (!list.length) { grid.innerHTML = '<div class="loading">No products match</div>'; return; }
+
+  grid.innerHTML = list.map(p => `
+    <div class="product-thumb" onclick="openDrawer(${p.id})">
+      ${p.image_url
+        ? `<img src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}" loading="lazy" onerror="this.style.display='none'">`
+        : `<div class="no-img-placeholder"><span>${escHtml(p.name)}</span></div>`}
+      <div class="product-thumb-overlay">
+        <p class="product-thumb-brand">${escHtml(BRAND_LABELS[p.brand] || p.brand)}</p>
+        <p class="product-thumb-name">${escHtml(p.name)}</p>
+      </div>
+      ${p.visible === false ? '<span class="hidden-badge">Hidden</span>' : ''}
+    </div>`).join('');
+}
+
+// ── PRODUCT DRAWER ──
+function openDrawer(id) {
+  const p = _allProducts.find(x => x.id === id);
+  if (!p) return;
+  _editingId = id;
+  _pendingChanges = { ...p };
+
+  document.getElementById('drawerTitle').textContent = p.name;
+  document.getElementById('drawerBrand').textContent = BRAND_LABELS[p.brand] || p.brand;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerBackdrop').classList.add('open');
+  document.getElementById('saveMsg').classList.remove('visible');
+  document.getElementById('saveBtn').disabled = false;
+
+  renderDrawerBody(p);
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerBackdrop').classList.remove('open');
+  _editingId = null;
+  _pendingChanges = {};
+}
+
+function renderDrawerBody(p) {
+  const styleOpts = STYLE_OPTIONS[p.category] || [];
+  const editItems = _allEdits.map(e => {
+    const inEdit = e._productIds && e._productIds.includes(p.id);
+    return `<div class="edit-check-item ${inEdit ? 'active' : ''}" id="editItem-${e.id}" onclick="toggleEditMembership(${e.id}, ${p.id}, this)">
+      <span class="edit-check-box"></span>
+      <span class="edit-check-name">${escHtml(e.name)}</span>
+    </div>`;
+  }).join('');
+
+  const occasionsArr = (p.occasion || '').split(',').map(s => s.trim()).filter(Boolean);
+  const activeColour = (p.colour || '').toLowerCase().trim();
+
+  document.getElementById('drawerBody').innerHTML = `
+    ${p.image_url
+      ? `<img class="drawer-img" src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}">`
+      : `<div class="drawer-img-placeholder"><span>No image</span></div>`}
+
+    <!-- Visibility -->
+    <div class="field-group">
+      <span class="field-label">Visibility</span>
+      <div class="toggle-row">
+        <span class="toggle-label">Show on site</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="visibleToggle" ${p.visible !== false ? 'checked' : ''} onchange="setPending('visible', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Price -->
+    <div class="field-group">
+      <span class="field-label">Price</span>
+      <input class="field-input" id="priceInput" type="text" value="${escHtml(p.price || '')}" oninput="setPending('price', this.value)" placeholder="e.g. $178">
+    </div>
+
+    <!-- Category -->
+    <div class="field-group">
+      <span class="field-label">Category</span>
+      <select class="field-input" id="catSelect" onchange="setPending('category', this.value); refreshStylePills(this.value)">
+        <option value="">— select —</option>
+        ${CATEGORIES.map(c => `<option value="${c}" ${p.category === c ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('')}
+      </select>
+    </div>
+
+    <!-- Style -->
+    ${styleOpts.length ? `
+    <div class="field-group">
+      <span class="field-label">Style</span>
+      <div class="pill-group" id="stylePills">
+        ${styleOpts.map(s => `<button class="pill ${p.style === s ? 'active' : ''}" onclick="setPillSingle('style', '${escHtml(s)}', this)">${escHtml(s)}</button>`).join('')}
+      </div>
+    </div>` : `<div id="stylePillsWrap"></div>`}
+
+    <!-- Colour -->
+    <div class="field-group">
+      <span class="field-label">Colour</span>
+      <div class="pill-group">
+        ${COLOURS.map(c => `
+          <button class="pill ${activeColour === c ? 'active' : ''}"
+            style="display:flex;align-items:center;gap:6px;"
+            onclick="setPillSingle('colour', '${c}', this)">
+            <span style="width:10px;height:10px;border-radius:50%;background:${COLOUR_HEX[c]};border:1px solid rgba(255,255,255,0.15);flex-shrink:0;display:inline-block;"></span>${c}
+          </button>`).join('')}
+      </div>
+    </div>
+
+    <!-- Occasion -->
+    <div class="field-group">
+      <span class="field-label">Occasion <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">(select all that apply)</span></span>
+      <div class="pill-group" id="occasionPills">
+        ${OCCASIONS.map(o => `<button class="pill ${occasionsArr.includes(o) ? 'active-green' : ''}" onclick="toggleOccasion('${escHtml(o)}', this)">${escHtml(o)}</button>`).join('')}
+      </div>
+    </div>
+
+    <!-- Tag -->
+    <div class="field-group">
+      <span class="field-label">Badge label <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">(shown on product card)</span></span>
+      <input class="field-input" type="text" value="${escHtml(p.tag || '')}" oninput="setPending('tag', this.value)" placeholder="e.g. New In, B Corp, GOTS">
+    </div>
+
+    <!-- Tag type -->
+    <div class="field-group">
+      <span class="field-label">Badge colour</span>
+      <div class="pill-group">
+        <button class="pill ${(p.tag_type || 'standard') === 'standard' ? 'active' : ''}" onclick="setPillSingle('tag_type','standard',this)">Dark</button>
+        <button class="pill ${p.tag_type === 'eco' ? 'active-green' : ''}" onclick="setPillSingleGreen('tag_type','eco',this)">Eco (green)</button>
+      </div>
+    </div>
+
+    <!-- Edits -->
+    ${_allEdits.length ? `
+    <div class="field-group">
+      <span class="field-label">Edits</span>
+      <div class="edit-check-list">${editItems}</div>
+    </div>` : ''}
+  `;
+}
+
+function setPending(key, val) { _pendingChanges[key] = val; }
+
+function setPillSingle(key, val, btn) {
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b => b.classList.remove('active', 'active-green'));
+  btn.classList.add('active');
+  _pendingChanges[key] = val;
+}
+
+function setPillSingleGreen(key, val, btn) {
+  btn.closest('.pill-group').querySelectorAll('.pill').forEach(b => b.classList.remove('active', 'active-green'));
+  btn.classList.add('active-green');
+  _pendingChanges[key] = val;
+}
+
+function toggleOccasion(occ, btn) {
+  const arr = (_pendingChanges.occasion || '').split(',').map(s => s.trim()).filter(Boolean);
+  const idx = arr.indexOf(occ);
+  if (idx === -1) { arr.push(occ); btn.classList.add('active-green'); }
+  else { arr.splice(idx, 1); btn.classList.remove('active-green'); }
+  _pendingChanges.occasion = arr.join(', ');
+}
+
+function refreshStylePills(cat) {
+  const opts = STYLE_OPTIONS[cat] || [];
+  const wrap = document.getElementById('stylePills') || document.getElementById('stylePillsWrap');
+  if (!wrap) return;
+  if (!opts.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = opts.map(s => `<button class="pill" onclick="setPillSingle('style','${escHtml(s)}',this)">${escHtml(s)}</button>`).join('');
+  _pendingChanges.style = null;
+}
+
+async function saveProduct() {
+  if (!_editingId) return;
+  const btn = document.getElementById('saveBtn');
+  const msg = document.getElementById('saveMsg');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  msg.classList.remove('visible', 'error');
+
+  const updates = {
+    visible:  _pendingChanges.visible !== undefined ? _pendingChanges.visible : true,
+    price:    _pendingChanges.price,
+    category: _pendingChanges.category,
+    style:    _pendingChanges.style,
+    colour:   _pendingChanges.colour,
+    occasion: _pendingChanges.occasion,
+    tag:      _pendingChanges.tag,
+    tag_type: _pendingChanges.tag_type,
+  };
+
+  const { error } = await sb.from('products').update(updates).eq('id', _editingId);
+
+  if (error) {
+    msg.textContent = 'Error: ' + error.message;
+    msg.classList.add('visible', 'error');
+  } else {
+    msg.textContent = '✓ Saved';
+    msg.classList.add('visible');
+    // Update local cache
+    const idx = _allProducts.findIndex(p => p.id === _editingId);
+    if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...updates };
+    filterProducts();
+    setTimeout(() => { msg.classList.remove('visible'); }, 2500);
+  }
+  btn.disabled = false; btn.textContent = 'Save changes';
+}
+
+// ── EDITS ──
+async function loadEdits() {
+  const { data: edits } = await sb.from('edits').select('*').order('sort_order');
+  if (!edits) return;
+
+  // For each edit, get product IDs in it
+  for (const edit of edits) {
+    const { data: ep } = await sb.from('edit_products').select('product_id').eq('edit_id', edit.id);
+    edit._productIds = ep ? ep.map(r => r.product_id) : [];
+  }
+  _allEdits = edits;
+  renderEditsGrid();
+}
+
+function renderEditsGrid() {
+  const grid = document.getElementById('editsGrid');
+  if (!_allEdits.length) { grid.innerHTML = '<p class="notes-empty">No edits found. Add them via Supabase SQL.</p>'; return; }
+  grid.innerHTML = _allEdits.map(e => `
+    <div class="edit-card">
+      <div class="edit-card-header">
+        <div>
+          <p class="edit-card-name">${escHtml(e.name)}</p>
+          <p class="edit-card-key">${escHtml(e.key)}</p>
+        </div>
+        <span class="edit-status ${e.active ? 'live' : 'hidden'}">${e.active ? 'Live' : 'Hidden'}</span>
+      </div>
+      <p class="edit-card-desc">${escHtml(e.description || '—')}</p>
+      <p style="font-size:11px;color:var(--text3);margin-bottom:14px;">${e._productIds.length} products</p>
+      <div class="edit-card-actions">
+        <button class="edit-action-btn primary" onclick="toggleEditActive(${e.id}, ${e.active}, this)">
+          ${e.active ? 'Take offline' : 'Go live'}
+        </button>
+        <button class="edit-action-btn" onclick="alert('To add/remove products from this edit, open a product and use the Edits section in the drawer.')">
+          Manage products
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+async function toggleEditActive(id, current, btn) {
+  const newVal = !current;
+  const { error } = await sb.from('edits').update({ active: newVal }).eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  const edit = _allEdits.find(e => e.id === id);
+  if (edit) edit.active = newVal;
+  renderEditsGrid();
+}
+
+async function toggleEditMembership(editId, productId, el) {
+  const edit = _allEdits.find(e => e.id === editId);
+  if (!edit) return;
+  const isIn = edit._productIds.includes(productId);
+
+  if (isIn) {
+    const { error } = await sb.from('edit_products').delete().eq('edit_id', editId).eq('product_id', productId);
+    if (error) { alert('Error: ' + error.message); return; }
+    edit._productIds = edit._productIds.filter(id => id !== productId);
+    el.classList.remove('active');
+  } else {
+    const { error } = await sb.from('edit_products').insert({ edit_id: editId, product_id: productId, sort_order: 0 });
+    if (error) { alert('Error: ' + error.message); return; }
+    edit._productIds.push(productId);
+    el.classList.add('active');
+  }
+}
+
+// ── NOTES ──
+async function loadNotes() {
+  const { data } = await sb.from('admin_notes').select('*').order('created_at', { ascending: false }).limit(20);
+  renderNotes(data || []);
+}
+
+function renderNotes(notes) {
+  const list = document.getElementById('notesList');
+  if (!notes.length) { list.innerHTML = '<p class="notes-empty">No notes yet.</p>'; return; }
+  list.innerHTML = notes.map(n => `
+    <div class="note-item">
+      <p class="note-item-date">${new Date(n.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</p>
+      <p class="note-item-body">${escHtml(n.body)}</p>
+    </div>`).join('');
+}
+
+async function submitNote() {
+  const body = document.getElementById('noteText').value.trim();
+  if (!body) return;
+  const btn = document.getElementById('noteSubmitBtn');
+  const confirm = document.getElementById('noteConfirm');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  const { error } = await sb.from('admin_notes').insert({ body });
+  if (error) { alert('Error saving note: ' + error.message); }
+  else {
+    document.getElementById('noteText').value = '';
+    confirm.classList.add('visible');
+    setTimeout(() => confirm.classList.remove('visible'), 3000);
+    await loadNotes();
+  }
+  btn.disabled = false; btn.textContent = 'Save note';
+}
+
+// ── UTILS ──
+function escHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
