@@ -287,7 +287,7 @@ function renderCard(p) {
          data-name="${escAttr(p.name)}" data-brandlabel="${escAttr(brandLabel)}"
          data-price="${escAttr(displayPrice)}" data-material="${escAttr(p.material || '')}"
          data-img="${escAttr(p.image_url || '')}" data-url="${escAttr(p.shop_url)}"
-         data-subcat="${escAttr(p.subcategory || '')}">
+         data-subcat="${escAttr(p.subcategory || '')}" data-occasion="${escAttr(p.occasion || '')}" data-color="${escAttr(p.color || '')}">
       <div class="product-img">
         ${imgHtml}
         <div class="product-img-overlay"></div>
@@ -1812,10 +1812,17 @@ function runCombinedFilter() {
     // Brand filter
     if (show && hasBrand && !_sidebarBrands.has(card.dataset.brand)) show = false;
 
-    // Colour filter
+    // Colour filter — use data-color field from DB, fall back to keyword scan of name
     if (show && hasColour) {
-      const hay = (card.dataset.name || '').toLowerCase();
-      if (!colourKeywords.some(kw => hay.includes(kw))) show = false;
+      const cardColor = (card.dataset.color || '').toLowerCase();
+      if (cardColor) {
+        // Direct match against the color field stored in DB
+        if (!_sidebarColours.has(cardColor)) show = false;
+      } else {
+        // Fallback: keyword scan of product name (for older products without color set)
+        const hay = (card.dataset.name || '').toLowerCase();
+        if (!colourKeywords.some(kw => hay.includes(kw))) show = false;
+      }
     }
 
     // Occasion filter (uses data-occasion if available)
