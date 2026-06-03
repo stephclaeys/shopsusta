@@ -569,7 +569,7 @@ function buildEditPages() {
         </div>
       </div>`;
 
-    document.body.insertBefore(page, document.querySelector('script'));
+    document.body.appendChild(page);
   });
 }
 
@@ -580,14 +580,12 @@ function showEditPage(key) {
     const poll = setInterval(() => {
       if (document.getElementById('page-edit-' + key)) {
         clearInterval(poll);
-        showPage('edit-' + key);
-        loadEditProducts(key);
+        showPage('edit-' + key); // showPage calls loadEditProducts internally
       }
     }, 100);
     return;
   }
-  showPage('edit-' + key);
-  loadEditProducts(key);
+  showPage('edit-' + key); // showPage calls loadEditProducts internally
 }
 
 async function loadEditProducts(key) {
