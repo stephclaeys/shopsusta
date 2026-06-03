@@ -322,14 +322,14 @@ async function initShopCount() {
     // Always query by id — reliable fallback, click_count column may not exist yet
     let data = null;
     try {
-      const r1 = await sb.from('products').select('*').eq('visible', true).order('click_count', { ascending: false });
+      const r1 = await sb.from('products').select('*').order('click_count', { ascending: false });
       if (!r1.error && r1.data) data = r1.data;
     } catch(e) {}
 
     // Fallback to ordering by id if click_count failed or returned nothing
     if (!data) {
       try {
-        const r2 = await sb.from('products').select('*').eq('visible', true).order('id');
+        const r2 = await sb.from('products').select('*').order('id');
         if (!r2.error && r2.data) data = r2.data;
       } catch(e) {}
     }
@@ -595,7 +595,6 @@ async function loadEditProducts(key) {
     .from('edit_products')
     .select('product_id, sort_order, products(*)')
     .eq('edit_id', edit.id)
-    .eq('products.visible', true)
     .order('sort_order');
 
   if (error || !data || !data.length) {
@@ -992,7 +991,7 @@ function showBrandDetail(brandKey) {
   document.getElementById('bdNoResults').style.display = 'none';
 
   // Query Supabase directly — avoids dataset encoding issues entirely
-  sb.from('products').select('*').eq('brand', brandKey).eq('visible', true).order('click_count', { ascending: false })
+  sb.from('products').select('*').eq('brand', brandKey).order('click_count', { ascending: false })
     .then(({ data: products, error }) => {
       if (error || !products) {
         grid.innerHTML = '';
@@ -1495,12 +1494,12 @@ const STYLE_KEYWORDS = {
   'Other':       [],
 };
 
-let _activeStyle = null;
+let _activeStyles = new Set(); // multi-select style filter
 
 function shopSetCat(cat) {
   _activeCat = cat;
   _activeSub = null;
-  _activeStyle = null;
+  _activeStyles = new Set();
   updateCatTabs();
   updateStyleSection();
   runCombinedFilter();
@@ -1512,7 +1511,7 @@ function shopSetCat(cat) {
 function shopSetCatSub(cat, sub) {
   _activeCat = cat;
   _activeSub = sub;
-  _activeStyle = null;
+  _activeStyles = new Set();
   updateCatTabs();
   updateStyleSection();
   runCombinedFilter();
@@ -1544,7 +1543,7 @@ function updateStyleSection() {
   const options = STYLE_OPTIONS[_activeCat];
   if (!options) {
     section.style.display = 'none';
-    _activeStyle = null;
+    _activeStyles = new Set();
     return;
   }
 
@@ -1559,13 +1558,9 @@ function updateStyleSection() {
 
 function onStyleChange(style, input) {
   if (input.checked) {
-    // uncheck others — style is single-select for now
-    document.querySelectorAll('#sidebarStyleList input').forEach(i => {
-      if (i !== input) i.checked = false;
-    });
-    _activeStyle = style;
+    _activeStyles.add(style);
   } else {
-    _activeStyle = null;
+    _activeStyles.delete(style);
   }
   updateSidebarTags();
   runCombinedFilter();
@@ -1575,7 +1570,7 @@ function onStyleChange(style, input) {
 // SIDEBAR FILTER STATE + FUNCTIONS
 // ══════════════════════════════════════════
 const PRICE_MAX = 1000;
-const SIDEBAR_OCCASIONS = ['Everyday','Summer','Formal','Wedding Guest','Beach','Active'];
+const SIDEBAR_OCCASIONS = ['Weekend Wear','Formal','Beach Ready','Office Attire','Night Out','Off-Duty'];
 const SIDEBAR_COLOURS = [
   { key:'black',  label:'Black',  hex:'#1a1a1a' },
   { key:'white',  label:'White',  hex:'#ffffff' },
@@ -1668,7 +1663,7 @@ function clearSidebarFilters() {
   _sidebarBrands.clear();
   _sidebarColours.clear();
   _sidebarOccasions.clear();
-  _activeStyle = null;
+  _activeStyles = new Set();
   _sidebarPriceMin = 0;
   _sidebarPriceMax = PRICE_MAX;
   // Reset UI
@@ -1690,7 +1685,7 @@ function updateSidebarTags() {
   const clearBtn  = document.getElementById('sidebarClearBtn');
   if (!container) return;
   const tags = [];
-  if (_activeStyle) tags.push({ label: _activeStyle, remove: () => { _activeStyle = null; document.querySelectorAll('#sidebarStyleList input').forEach(i => i.checked = false); updateSidebarTags(); runCombinedFilter(); } });
+  _activeStyles.forEach(s => tags.push({ label: s, remove: () => { _activeStyles.delete(s); document.querySelectorAll('#sidebarStyleList input').forEach(i => { if(i.value===s) i.checked=false; }); updateSidebarTags(); runCombinedFilter(); } }));
   _sidebarBrands.forEach(k   => tags.push({ label: BRAND_LABELS[k] || k,  remove: () => { _sidebarBrands.delete(k); document.querySelector(`.sidebar-check input[value="${k}"]`).checked=false; updateSidebarTags(); runCombinedFilter(); } }));
   _sidebarOccasions.forEach(o => tags.push({ label: o, remove: () => { _sidebarOccasions.delete(o); document.querySelectorAll('.sidebar-check input').forEach(i=>{if(i.value===o)i.checked=false;}); updateSidebarTags(); runCombinedFilter(); } }));
   _sidebarColours.forEach(c  => {
@@ -1772,19 +1767,20 @@ function runCombinedFilter() {
       if (!catMatch || !(subcatMatch || kwMatch)) show = false;
     }
 
-    // Style filter
-    if (show && _activeStyle) {
+    // Style filter — multi-select, product must match at least one selected style
+    if (show && _activeStyles.size > 0) {
       const hay = (card.dataset.name + ' ' + card.dataset.material).toLowerCase();
-      const kws = STYLE_KEYWORDS[_activeStyle] || [_activeStyle.toLowerCase()];
-      // 'Other' matches anything not matched by other style options in this category
-      if (_activeStyle === 'Other') {
-        const allKws = (STYLE_OPTIONS[_activeCat] || [])
-          .filter(s => s !== 'Other')
-          .flatMap(s => STYLE_KEYWORDS[s] || []);
-        if (allKws.some(kw => hay.includes(kw))) show = false;
-      } else {
-        if (!kws.some(kw => hay.includes(kw))) show = false;
-      }
+      const matched = [..._activeStyles].some(style => {
+        const kws = STYLE_KEYWORDS[style] || [style.toLowerCase()];
+        if (style === 'Other') {
+          const allKws = (STYLE_OPTIONS[_activeCat] || [])
+            .filter(s => s !== 'Other')
+            .flatMap(s => STYLE_KEYWORDS[s] || []);
+          return !allKws.some(kw => hay.includes(kw));
+        }
+        return kws.some(kw => hay.includes(kw));
+      });
+      if (!matched) show = false;
     }
 
     // Brand filter
