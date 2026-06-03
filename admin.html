@@ -672,8 +672,7 @@ function renderProductGrid(products) {
 
   grid.innerHTML = list.map(p => `
     <div class="product-thumb ${_bulkMode ? 'selectable' : ''} ${_selectedIds.has(p.id) ? 'selected' : ''}"
-         data-id="${p.id}"
-         onclick="${_bulkMode ? `toggleSelect(${p.id})` : `openDrawer(${p.id})`}">
+         data-id="${p.id}">
       <span class="select-check"></span>
       ${p.image_url
         ? `<img src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}" loading="lazy" onerror="this.style.display='none'">`
@@ -684,6 +683,15 @@ function renderProductGrid(products) {
       </div>
       ${p.visible === false ? '<span class="hidden-badge">Hidden</span>' : ''}
     </div>`).join('');
+
+  // Use event delegation — one listener on the grid, no inline handlers
+  grid.onclick = function(e) {
+    const thumb = e.target.closest('.product-thumb');
+    if (!thumb) return;
+    const id = parseInt(thumb.dataset.id, 10);
+    if (_bulkMode) toggleSelect(id);
+    else openDrawer(id);
+  };
 }
 
 // ── BULK SELECT ──
@@ -836,7 +844,7 @@ function renderDrawerBody(p) {
   const styleOpts = STYLE_OPTIONS[p.category] || [];
   const editItems = _allEdits.map(e => {
     const inEdit = e._productIds && e._productIds.includes(p.id);
-    return `<div class="edit-check-item ${inEdit ? 'active' : ''}" id="editItem-${e.id}" onclick="toggleEditMembership(${e.id}, ${p.id}, this)">
+    return `<div class="edit-check-item ${inEdit ? 'active' : ''}" id="editItem-${e.id}" data-edit-id="${e.id}" data-product-id="${p.id}">
       <span class="edit-check-box"></span>
       <span class="edit-check-name">${escHtml(e.name)}</span>
     </div>`;
@@ -856,7 +864,7 @@ function renderDrawerBody(p) {
       <div class="toggle-row">
         <span class="toggle-label">Show on site</span>
         <label class="toggle-switch">
-          <input type="checkbox" id="visibleToggle" ${p.visible !== false ? 'checked' : ''} onchange="setPending('visible', this.checked)">
+          <input type="checkbox" id="visibleToggle" ${p.visible !== false ? 'checked' : ''}>
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -865,13 +873,13 @@ function renderDrawerBody(p) {
     <!-- Price -->
     <div class="field-group">
       <span class="field-label">Price</span>
-      <input class="field-input" id="priceInput" type="text" value="${escHtml(p.price || '')}" oninput="setPending('price', this.value)" placeholder="e.g. $178">
+      <input class="field-input" id="priceInput" type="text" value="${escHtml(p.price || '')}" placeholder="e.g. $178">
     </div>
 
     <!-- Category -->
     <div class="field-group">
       <span class="field-label">Category</span>
-      <select class="field-input" id="catSelect" onchange="setPending('category', this.value); refreshStylePills(this.value)">
+      <select class="field-input" id="catSelect">
         <option value="">— select —</option>
         ${CATEGORIES.map(c => `<option value="${c}" ${p.category === c ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`).join('')}
       </select>
@@ -882,18 +890,17 @@ function renderDrawerBody(p) {
     <div class="field-group">
       <span class="field-label">Style</span>
       <div class="pill-group" id="stylePills">
-        ${styleOpts.map(s => `<button class="pill ${p.style === s ? 'active' : ''}" onclick="setPillSingle('style', '${escHtml(s)}', this)">${escHtml(s)}</button>`).join('')}
+        ${styleOpts.map(s => `<button class="pill ${p.style === s ? 'active' : ''}" data-pill="style" data-val="${escHtml(s)}">${escHtml(s)}</button>`).join('')}
       </div>
     </div>` : `<div id="stylePillsWrap"></div>`}
 
     <!-- Colour -->
     <div class="field-group">
       <span class="field-label">Colour</span>
-      <div class="pill-group">
+      <div class="pill-group" id="colourPills">
         ${COLOURS.map(c => `
-          <button class="pill ${activeColour === c ? 'active' : ''}"
-            style="display:flex;align-items:center;gap:6px;"
-            onclick="setPillSingle('colour', '${c}', this)">
+          <button class="pill ${activeColour === c ? 'active' : ''}" data-pill="colour" data-val="${c}"
+            style="display:flex;align-items:center;gap:6px;">
             <span style="width:10px;height:10px;border-radius:50%;background:${COLOUR_HEX[c]};border:1px solid rgba(255,255,255,0.15);flex-shrink:0;display:inline-block;"></span>${c}
           </button>`).join('')}
       </div>
@@ -903,22 +910,22 @@ function renderDrawerBody(p) {
     <div class="field-group">
       <span class="field-label">Occasion <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">(select all that apply)</span></span>
       <div class="pill-group" id="occasionPills">
-        ${OCCASIONS.map(o => `<button class="pill ${occasionsArr.includes(o) ? 'active-green' : ''}" onclick="toggleOccasion('${escHtml(o)}', this)">${escHtml(o)}</button>`).join('')}
+        ${OCCASIONS.map(o => `<button class="pill ${occasionsArr.includes(o) ? 'active-green' : ''}" data-pill="occasion" data-val="${escHtml(o)}">${escHtml(o)}</button>`).join('')}
       </div>
     </div>
 
     <!-- Tag -->
     <div class="field-group">
       <span class="field-label">Badge label <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0">(shown on product card)</span></span>
-      <input class="field-input" type="text" value="${escHtml(p.tag || '')}" oninput="setPending('tag', this.value)" placeholder="e.g. New In, B Corp, GOTS">
+      <input class="field-input" id="tagInput" type="text" value="${escHtml(p.tag || '')}" placeholder="e.g. New In, B Corp, GOTS">
     </div>
 
     <!-- Tag type -->
     <div class="field-group">
       <span class="field-label">Badge colour</span>
-      <div class="pill-group">
-        <button class="pill ${(p.tag_type || 'standard') === 'standard' ? 'active' : ''}" onclick="setPillSingle('tag_type','standard',this)">Dark</button>
-        <button class="pill ${p.tag_type === 'eco' ? 'active-green' : ''}" onclick="setPillSingleGreen('tag_type','eco',this)">Eco (green)</button>
+      <div class="pill-group" id="tagTypePills">
+        <button class="pill ${(p.tag_type || 'standard') === 'standard' ? 'active' : ''}" data-pill="tag_type" data-val="standard">Dark</button>
+        <button class="pill ${p.tag_type === 'eco' ? 'active-green' : ''}" data-pill-green="tag_type" data-val="eco">Eco (green)</button>
       </div>
     </div>
 
@@ -926,9 +933,62 @@ function renderDrawerBody(p) {
     ${_allEdits.length ? `
     <div class="field-group">
       <span class="field-label">Edits</span>
-      <div class="edit-check-list">${editItems}</div>
+      <div class="edit-check-list" id="editCheckList">${editItems}</div>
     </div>` : ''}
   `;
+
+  // ── Event delegation for drawer body ──
+  const body = document.getElementById('drawerBody');
+
+  // Visible toggle
+  document.getElementById('visibleToggle').onchange = function() { setPending('visible', this.checked); };
+
+  // Price input
+  document.getElementById('priceInput').oninput = function() { setPending('price', this.value); };
+
+  // Tag input
+  document.getElementById('tagInput').oninput = function() { setPending('tag', this.value); };
+
+  // Category select
+  document.getElementById('catSelect').onchange = function() {
+    setPending('category', this.value);
+    refreshStylePills(this.value);
+  };
+
+  // Pill clicks — single select
+  body.addEventListener('click', function drawerPillClick(e) {
+    const pill = e.target.closest('[data-pill]');
+    const pillGreen = e.target.closest('[data-pill-green]');
+    const editItem  = e.target.closest('.edit-check-item[data-edit-id]');
+
+    if (pill) {
+      const key = pill.dataset.pill;
+      const val = pill.dataset.val;
+      if (key === 'occasion') {
+        // Multi-select for occasion
+        toggleOccasion(val, pill);
+      } else {
+        // Single select for style, colour, tag_type
+        pill.closest('.pill-group').querySelectorAll('.pill').forEach(b => b.classList.remove('active', 'active-green'));
+        pill.classList.add('active');
+        setPending(key, val);
+      }
+    }
+
+    if (pillGreen) {
+      const key = pillGreen.dataset.pillGreen;
+      const val = pillGreen.dataset.val;
+      pillGreen.closest('.pill-group').querySelectorAll('.pill').forEach(b => b.classList.remove('active', 'active-green'));
+      pillGreen.classList.add('active-green');
+      setPending(key, val);
+    }
+
+    if (editItem) {
+      const editId    = parseInt(editItem.dataset.editId, 10);
+      const productId = parseInt(editItem.dataset.productId, 10);
+      toggleEditMembership(editId, productId, editItem);
+    }
+  });
 }
 
 function setPending(key, val) { _pendingChanges[key] = val; }
@@ -958,7 +1018,7 @@ function refreshStylePills(cat) {
   const wrap = document.getElementById('stylePills') || document.getElementById('stylePillsWrap');
   if (!wrap) return;
   if (!opts.length) { wrap.innerHTML = ''; return; }
-  wrap.innerHTML = opts.map(s => `<button class="pill" onclick="setPillSingle('style','${escHtml(s)}',this)">${escHtml(s)}</button>`).join('');
+  wrap.innerHTML = opts.map(s => `<button class="pill" data-pill="style" data-val="${escHtml(s)}">${escHtml(s)}</button>`).join('');
   _pendingChanges.style = null;
 }
 
@@ -1026,14 +1086,28 @@ function renderEditsGrid() {
       <p class="edit-card-desc">${escHtml(e.description || '—')}</p>
       <p style="font-size:11px;color:var(--text3);margin-bottom:14px;">${e._productIds.length} products</p>
       <div class="edit-card-actions">
-        <button class="edit-action-btn primary" onclick="toggleEditActive(${e.id}, ${e.active}, this)">
+        <button class="edit-action-btn primary" data-edit-id="${e.id}" data-edit-active="${e.active}">
           ${e.active ? 'Take offline' : 'Go live'}
         </button>
-        <button class="edit-action-btn" onclick="alert('To add/remove products from this edit, open a product and use the Edits section in the drawer.')">
+        <button class="edit-action-btn" data-edit-info="true">
           Manage products
         </button>
       </div>
     </div>`).join('');
+
+  // Event delegation for edit cards
+  grid.onclick = function(e) {
+    const toggleBtn = e.target.closest('[data-edit-id]');
+    const infoBtn   = e.target.closest('[data-edit-info]');
+    if (toggleBtn) {
+      const id     = parseInt(toggleBtn.dataset.editId, 10);
+      const active = toggleBtn.dataset.editActive === 'true';
+      toggleEditActive(id, active);
+    }
+    if (infoBtn) {
+      alert('To add/remove products from this edit, open a product and use the Edits section in the drawer.');
+    }
+  };
 }
 
 async function toggleEditActive(id, current, btn) {
