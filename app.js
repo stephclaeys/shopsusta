@@ -601,19 +601,34 @@ async function loadEditProducts(key) {
 
   grid.innerHTML = '<p class="edit-loading">Loading…</p>';
 
-  // Fetch products linked to this edit via edit_products join table
-  const { data, error } = await sb
+  // Step 1: fetch ordered product IDs for this edit
+  const { data: epRows, error: epErr } = await sb
     .from('edit_products')
-    .select('product_id, sort_order, products(*)')
+    .select('product_id, sort_order')
     .eq('edit_id', edit.id)
     .order('sort_order');
 
-  if (error || !data || !data.length) {
-    grid.innerHTML = '<p class="edit-loading">No products in this edit yet. Add some via Supabase.</p>';
+  if (epErr || !epRows || !epRows.length) {
+    grid.innerHTML = '<p class="edit-loading">No products in this edit yet.</p>';
     return;
   }
 
-  const products = data.map(row => row.products);
+  // Step 2: fetch full product rows by ID
+  const productIds = epRows.map(r => r.product_id);
+  const { data: products, error: pErr } = await sb
+    .from('products')
+    .select('*')
+    .in('id', productIds);
+
+  if (pErr || !products || !products.length) {
+    grid.innerHTML = '<p class="edit-loading">Could not load products.</p>';
+    return;
+  }
+
+  // Preserve the sort_order from edit_products
+  const orderMap = Object.fromEntries(epRows.map(r => [r.product_id, r.sort_order]));
+  products.sort((a, b) => (orderMap[a.id] ?? 999) - (orderMap[b.id] ?? 999));
+
   grid.innerHTML = products.map(p => renderEditCard(p)).join('');
   countEl.textContent = products.length + ' piece' + (products.length !== 1 ? 's' : '');
   _editLoaded[key] = true;
