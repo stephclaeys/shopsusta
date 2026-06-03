@@ -575,6 +575,17 @@ function buildEditPages() {
 
 // ── Show an edit page and load its products ──
 function showEditPage(key) {
+  // If edits haven't been built yet (still loading), poll until the page div exists
+  if (!document.getElementById('page-edit-' + key)) {
+    const poll = setInterval(() => {
+      if (document.getElementById('page-edit-' + key)) {
+        clearInterval(poll);
+        showPage('edit-' + key);
+        loadEditProducts(key);
+      }
+    }, 100);
+    return;
+  }
   showPage('edit-' + key);
   loadEditProducts(key);
 }

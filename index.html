@@ -278,6 +278,11 @@
 
   <!-- ── Category tab bar ── -->
   <div class="shop-cat-bar" id="shopCatBar">
+    <button class="cat-bar-filter-btn mobile-only" onclick="toggleMobileSidebar()" id="catBarFilterBtn" aria-label="Filters">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+      <span>Filter</span>
+    </button>
+    <div class="cat-bar-divider mobile-only"></div>
     <div class="cat-tab active" id="cattab-all" onclick="shopSetCat('all')">
       <span class="cat-tab-label">All</span>
     </div>
@@ -348,6 +353,14 @@
     <!-- ── Sidebar ── -->
     <aside class="shop-sidebar">
 
+      <!-- Mobile drawer header (hidden on desktop) -->
+      <div class="sidebar-drawer-header">
+        <span class="sidebar-drawer-title">Filters</span>
+        <button class="sidebar-drawer-close" onclick="closeMobileSidebar()">
+          Close <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
       <!-- Active filter tags -->
       <div class="sidebar-active-filters" id="sidebarActiveTags"></div>
       <button class="sidebar-clear-btn" id="sidebarClearBtn" onclick="clearSidebarFilters()">Clear all filters</button>
@@ -355,9 +368,9 @@
       <!-- Edits -->
       <div class="sidebar-section" style="padding:16px 28px 8px;">
         <p class="sidebar-title">Edits</p>
-        <span class="sidebar-link" id="sb-edits" onclick="showPage('edit-bestdressed')">Best Dressed Guest</span>
-        <span class="sidebar-link" onclick="showPage('home')">Euro Summer</span>
-        <span class="sidebar-link" onclick="showPage('edit-onabeach')">On a Beach</span>
+        <span class="sidebar-link" id="sb-edits" onclick="showEditPage('bestdressed')">Best Dressed Guest</span>
+        <span class="sidebar-link" onclick="showEditPage('eurosummer')">Euro Summer</span>
+        <span class="sidebar-link" onclick="showEditPage('onabeach')">On a Beach</span>
       </div>
       <div class="sidebar-divider"></div>
 
