@@ -264,10 +264,47 @@ input, textarea, select { font-family: var(--sans); }
 .section-title { font-size: 11px; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text2); }
 .section-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
 
-/* ── LOADING / STATES ── */
-.loading { padding: 48px; text-align: center; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
-.divider { height: 0.5px; background: var(--border); margin: 24px 0; }
-</style>
+/* ── BULK SELECT ── */
+.bulk-select-btn { padding: 8px 14px; background: none; border: 0.5px solid var(--border); color: var(--text3); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.15s; }
+.bulk-select-btn:hover { border-color: var(--text3); color: var(--text); }
+.bulk-select-btn.active { border-color: var(--accent); color: var(--accent); }
+
+.product-thumb.selectable { cursor: pointer; }
+.product-thumb.selected .product-thumb-overlay { background: rgba(209,10,50,0.35) !important; }
+.product-thumb .select-check {
+  position: absolute; top: 8px; left: 8px; width: 20px; height: 20px;
+  border: 1.5px solid rgba(255,255,255,0.5); border-radius: 50%;
+  background: rgba(15,13,12,0.4); display: none;
+  align-items: center; justify-content: center; z-index: 3;
+}
+.product-thumb.selectable .select-check { display: flex; }
+.product-thumb.selected .select-check { background: var(--accent); border-color: var(--accent); }
+.product-thumb.selected .select-check::after { content: '✓'; font-size: 10px; color: #fff; font-weight: 500; }
+
+/* Bulk action bar */
+.bulk-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 400;
+  background: var(--surface); border-top: 0.5px solid var(--accent);
+  padding: 16px 24px; display: none;
+  flex-direction: column; gap: 14px;
+}
+.bulk-bar.visible { display: flex; }
+.bulk-bar-top { display: flex; align-items: center; justify-content: space-between; }
+.bulk-bar-count { font-size: 12px; color: var(--text); }
+.bulk-bar-count strong { color: var(--accent); font-weight: 500; }
+.bulk-deselect { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); background: none; border: none; transition: color 0.15s; }
+.bulk-deselect:hover { color: var(--text); }
+.bulk-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.bulk-field { display: flex; flex-direction: column; gap: 5px; }
+.bulk-field-label { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text3); }
+.bulk-select-input { padding: 8px 12px; background: var(--bg); border: 0.5px solid var(--border); color: var(--text2); font-size: 11px; outline: none; min-width: 140px; }
+.bulk-select-input:focus { border-color: var(--text3); }
+.bulk-apply-btn { padding: 10px 24px; background: var(--accent); color: #fff; border: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; transition: background 0.2s; align-self: flex-end; }
+.bulk-apply-btn:hover { background: var(--accent2); }
+.bulk-apply-btn:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
+.bulk-msg { font-size: 10px; color: var(--green-light); align-self: center; display: none; }
+.bulk-msg.visible { display: block; }
+
 </head>
 <body>
 
@@ -319,10 +356,134 @@ input, textarea, select { font-family: var(--sans); }
           <option value="accessories">Accessories</option>
         </select>
         <button class="filter-toggle" id="toggleHidden" onclick="toggleShowHidden()">Show hidden</button>
+        <button class="bulk-select-btn" id="bulkSelectBtn" onclick="toggleBulkMode()">Select</button>
         <span class="product-count" id="productCount"></span>
       </div>
       <div class="product-grid" id="productGrid">
         <div class="loading">Loading products…</div>
+      </div>
+    </div>
+
+    <!-- ════════ BULK ACTION BAR ════════ -->
+    <div class="bulk-bar" id="bulkBar">
+      <div class="bulk-bar-top">
+        <p class="bulk-bar-count"><strong id="bulkCount">0</strong> products selected</p>
+        <button class="bulk-deselect" onclick="deselectAll()">Deselect all</button>
+      </div>
+      <div class="bulk-fields">
+        <div class="bulk-field">
+          <span class="bulk-field-label">Visibility</span>
+          <select class="bulk-select-input" id="bulkVisible">
+            <option value="">— no change —</option>
+            <option value="true">Show on site</option>
+            <option value="false">Hide from site</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Category</span>
+          <select class="bulk-select-input" id="bulkCat">
+            <option value="">— no change —</option>
+            <option value="dresses">Dresses</option>
+            <option value="tops">Tops</option>
+            <option value="bottoms">Bottoms</option>
+            <option value="denim">Denim</option>
+            <option value="skirts">Skirts</option>
+            <option value="outerwear">Outerwear</option>
+            <option value="swim">Swim</option>
+            <option value="shoes">Shoes</option>
+            <option value="accessories">Accessories</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Style</span>
+          <select class="bulk-select-input" id="bulkStyle">
+            <option value="">— no change —</option>
+            <optgroup label="Dresses / Skirts">
+              <option value="Mini">Mini</option>
+              <option value="Midi">Midi</option>
+              <option value="Maxi">Maxi</option>
+            </optgroup>
+            <optgroup label="Tops">
+              <option value="Tank">Tank</option>
+              <option value="Short Sleeve">Short Sleeve</option>
+              <option value="Long Sleeve">Long Sleeve</option>
+              <option value="Sleeveless">Sleeveless</option>
+            </optgroup>
+            <optgroup label="Bottoms / Denim">
+              <option value="Long">Long</option>
+              <option value="Shorts">Shorts</option>
+            </optgroup>
+            <optgroup label="Outerwear">
+              <option value="Jackets">Jackets</option>
+              <option value="Hoodies">Hoodies</option>
+              <option value="Sweaters">Sweaters</option>
+            </optgroup>
+            <optgroup label="Swim">
+              <option value="Bikini">Bikini</option>
+              <option value="One Piece">One Piece</option>
+            </optgroup>
+            <optgroup label="Shoes">
+              <option value="Sandal">Sandal</option>
+              <option value="Ballet Flat">Ballet Flat</option>
+              <option value="Loafer">Loafer</option>
+              <option value="Boot">Boot</option>
+              <option value="Sneaker">Sneaker</option>
+            </optgroup>
+            <optgroup label="Accessories">
+              <option value="Necklace">Necklace</option>
+              <option value="Earrings">Earrings</option>
+              <option value="Ring">Ring</option>
+              <option value="Bracelet">Bracelet</option>
+              <option value="Bag">Bag</option>
+              <option value="Sunglasses">Sunglasses</option>
+              <option value="Hair">Hair</option>
+              <option value="Other">Other</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Colour</span>
+          <select class="bulk-select-input" id="bulkColour">
+            <option value="">— no change —</option>
+            <option value="black">Black</option>
+            <option value="white">White</option>
+            <option value="grey">Grey</option>
+            <option value="tan">Tan</option>
+            <option value="red">Red</option>
+            <option value="pink">Pink</option>
+            <option value="orange">Orange</option>
+            <option value="yellow">Yellow</option>
+            <option value="green">Green</option>
+            <option value="blue">Blue</option>
+            <option value="purple">Purple</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Occasion</span>
+          <select class="bulk-select-input" id="bulkOccasion">
+            <option value="">— no change —</option>
+            <option value="Weekend Wear">Weekend Wear</option>
+            <option value="Formal">Formal</option>
+            <option value="Beach Ready">Beach Ready</option>
+            <option value="Office Attire">Office Attire</option>
+            <option value="Night Out">Night Out</option>
+            <option value="Off-Duty">Off-Duty</option>
+          </select>
+        </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Badge</span>
+          <select class="bulk-select-input" id="bulkTag">
+            <option value="">— no change —</option>
+            <option value="New In">New In</option>
+            <option value="B Corp">B Corp</option>
+            <option value="Organic">Organic</option>
+            <option value="GOTS">GOTS</option>
+            <option value="Fair Trade">Fair Trade</option>
+            <option value="">Clear badge</option>
+          </select>
+        </div>
+        <button class="bulk-apply-btn" id="bulkApplyBtn" onclick="applyBulk()">Apply to selected</button>
+        <span class="bulk-msg" id="bulkMsg"></span>
       </div>
     </div>
 
@@ -510,7 +671,10 @@ function renderProductGrid(products) {
   if (!list.length) { grid.innerHTML = '<div class="loading">No products match</div>'; return; }
 
   grid.innerHTML = list.map(p => `
-    <div class="product-thumb" onclick="openDrawer(${p.id})">
+    <div class="product-thumb ${_bulkMode ? 'selectable' : ''} ${_selectedIds.has(p.id) ? 'selected' : ''}"
+         data-id="${p.id}"
+         onclick="${_bulkMode ? `toggleSelect(${p.id})` : `openDrawer(${p.id})`}">
+      <span class="select-check"></span>
       ${p.image_url
         ? `<img src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}" loading="lazy" onerror="this.style.display='none'">`
         : `<div class="no-img-placeholder"><span>${escHtml(p.name)}</span></div>`}
@@ -520,6 +684,128 @@ function renderProductGrid(products) {
       </div>
       ${p.visible === false ? '<span class="hidden-badge">Hidden</span>' : ''}
     </div>`).join('');
+}
+
+// ── BULK SELECT ──
+let _bulkMode = false;
+let _selectedIds = new Set();
+
+function toggleBulkMode() {
+  _bulkMode = !_bulkMode;
+  _selectedIds.clear();
+  document.getElementById('bulkSelectBtn').classList.toggle('active', _bulkMode);
+  document.getElementById('bulkSelectBtn').textContent = _bulkMode ? 'Cancel' : 'Select';
+  document.getElementById('bulkBar').classList.toggle('visible', false);
+  // Add padding so grid isn't hidden behind bulk bar when open
+  document.getElementById('panel-products').style.paddingBottom = _bulkMode ? '160px' : '';
+  filterProducts(); // re-render grid with/without selectable class
+}
+
+function toggleSelect(id) {
+  if (_selectedIds.has(id)) {
+    _selectedIds.delete(id);
+  } else {
+    _selectedIds.add(id);
+  }
+  // Update just this thumb rather than re-rendering whole grid
+  const thumb = document.querySelector(`.product-thumb[data-id="${id}"]`);
+  if (thumb) thumb.classList.toggle('selected', _selectedIds.has(id));
+  updateBulkBar();
+}
+
+function deselectAll() {
+  _selectedIds.clear();
+  document.querySelectorAll('.product-thumb.selected').forEach(t => t.classList.remove('selected'));
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const n = _selectedIds.size;
+  document.getElementById('bulkCount').textContent = n;
+  document.getElementById('bulkBar').classList.toggle('visible', n > 0 && _bulkMode);
+}
+
+async function applyBulk() {
+  if (!_selectedIds.size) return;
+
+  const updates = {};
+  const vis     = document.getElementById('bulkVisible').value;
+  const cat     = document.getElementById('bulkCat').value;
+  const style   = document.getElementById('bulkStyle').value;
+  const colour  = document.getElementById('bulkColour').value;
+  const occ     = document.getElementById('bulkOccasion').value;
+  const tag     = document.getElementById('bulkTag').value;
+
+  if (vis !== '')    updates.visible  = vis === 'true';
+  if (cat !== '')    updates.category = cat;
+  if (style !== '')  updates.style    = style;
+  if (colour !== '') updates.colour   = colour;
+  if (tag !== '')    updates.tag      = tag;
+
+  // Occasion is additive — append to existing rather than overwrite
+  // We'll handle it per-product if occasion is set
+  const addOccasion = occ !== '';
+
+  if (!Object.keys(updates).length && !addOccasion) {
+    alert('Select at least one field to update.');
+    return;
+  }
+
+  const btn = document.getElementById('bulkApplyBtn');
+  const msg = document.getElementById('bulkMsg');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  msg.classList.remove('visible');
+
+  const ids = [..._selectedIds];
+  let errors = 0;
+
+  if (addOccasion) {
+    // Per-product update to append occasion without overwriting existing
+    for (const id of ids) {
+      const product = _allProducts.find(p => p.id === id);
+      const existing = (product?.occasion || '').split(',').map(s => s.trim()).filter(Boolean);
+      if (!existing.includes(occ)) existing.push(occ);
+      const perUpdate = { ...updates, occasion: existing.join(', ') };
+      const { error } = await sb.from('products').update(perUpdate).eq('id', id);
+      if (error) errors++;
+      else {
+        const idx = _allProducts.findIndex(p => p.id === id);
+        if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...perUpdate };
+      }
+    }
+  } else {
+    // Bulk update all at once
+    const { error } = await sb.from('products').update(updates).in('id', ids);
+    if (error) {
+      errors++;
+    } else {
+      ids.forEach(id => {
+        const idx = _allProducts.findIndex(p => p.id === id);
+        if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...updates };
+      });
+    }
+  }
+
+  if (errors) {
+    msg.textContent = `${errors} error(s) — some may not have saved.`;
+    msg.style.color = 'var(--accent)';
+  } else {
+    msg.textContent = `✓ Updated ${ids.length} product${ids.length !== 1 ? 's' : ''}`;
+    msg.style.color = 'var(--green-light)';
+    // Reset dropdowns
+    ['bulkVisible','bulkCat','bulkStyle','bulkColour','bulkOccasion','bulkTag'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    setTimeout(() => {
+      msg.classList.remove('visible');
+      deselectAll();
+      toggleBulkMode();
+    }, 2000);
+  }
+
+  msg.classList.add('visible');
+  btn.disabled = false; btn.textContent = 'Apply to selected';
+  filterProducts();
 }
 
 // ── PRODUCT DRAWER ──
