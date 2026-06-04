@@ -233,8 +233,7 @@
       <div class="footer-col">
         <h4>Follow</h4>
         <ul>
-          <li>Instagram</li>
-          <li>Pinterest</li>
+          <li><a href="https://www.instagram.com/shopsusta/" target="_blank" style="color:inherit;text-decoration:none;">Instagram</a></li>
           <li>Newsletter</li>
         </ul>
       </div>
@@ -481,6 +480,44 @@
       </div>
     </main>
   </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="footer-brand-logo">SUSTA</span>
+        <p>A curated edit of women's fashion from brands that care about quality, craft, and longevity.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Shop</h4>
+        <ul>
+          <li onclick="goShop('all')">Shop All</li>
+          <li onclick="goShop('dresses')">Dresses</li>
+          <li onclick="goShop('tops')">Tops</li>
+          <li onclick="goShop('denim')">Denim</li>
+          <li onclick="goShop('shoes')">Shoes</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <ul>
+          <li onclick="showPage('about')">Our Story</li>
+          <li onclick="showPage('about')">How We Curate</li>
+          <li>Journal</li>
+          <li>Contact</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Follow</h4>
+        <ul>
+          <li><a href="https://www.instagram.com/shopsusta/" target="_blank" style="color:inherit;text-decoration:none;">Instagram</a></li>
+          <li>Newsletter</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 SUSTA. All rights reserved.</p>
+      <p>Affiliate links — we may earn a commission at no cost to you.</p>
+    </div>
+  </footer>
 </div>
 
 <!-- ═══════════════════════════════════════
@@ -545,15 +582,94 @@
       </div>
     </div>
     <div class="brand-products-section">
-      <h2 id="bdProductsHeading"></h2>
-      <p id="bdProductsSub"></p>
-      <div class="product-grid" id="bdProductGrid"></div>
-      <div class="no-results" id="bdNoResults" style="display:none">
-        <p>No products yet</p>
-        <span>Products from this brand are coming soon.</span>
+      <div class="brand-shop-layout">
+
+        <!-- Brand sidebar with category filters -->
+        <aside class="brand-shop-sidebar" id="brandShopSidebar">
+          <div class="sidebar-section">
+            <p class="sidebar-title">Clothing</p>
+            <span class="sidebar-link active" id="bsb-all" onclick="brandSetCat('all',this)">All Pieces</span>
+            <span class="sidebar-link" id="bsb-tops" onclick="brandSetCat('tops',this)">Tops</span>
+            <span class="sidebar-link" id="bsb-dresses" onclick="brandSetCat('dresses',this)">Dresses</span>
+            <span class="sidebar-link" id="bsb-bottoms" onclick="brandSetCat('bottoms',this)">Bottoms</span>
+            <span class="sidebar-link" id="bsb-denim" onclick="brandSetCat('denim',this)">Denim</span>
+            <span class="sidebar-link" id="bsb-skirts" onclick="brandSetCat('skirts',this)">Skirts</span>
+            <span class="sidebar-link" id="bsb-outerwear" onclick="brandSetCat('outerwear',this)">Outerwear</span>
+            <span class="sidebar-link" id="bsb-swim" onclick="brandSetCat('swim',this)">Swim</span>
+            <span class="sidebar-link" id="bsb-shoes" onclick="brandSetCat('shoes',this)">Shoes</span>
+            <span class="sidebar-link" id="bsb-accessories" onclick="brandSetCat('accessories',this)">Accessories</span>
+          </div>
+        </aside>
+
+        <!-- Brand products main area -->
+        <div class="brand-shop-main">
+          <div class="brand-shop-header">
+            <div>
+              <h2 id="bdProductsHeading"></h2>
+              <p id="bdProductsSub"></p>
+            </div>
+            <!-- Sort bar -->
+            <div class="sort-bar" style="margin-bottom:0;">
+              <span class="sort-label">Sort by</span>
+              <div class="sort-dropdown-wrap">
+                <button class="sort-trigger" id="bdSortTrigger" onclick="toggleBdSortMenu()">
+                  <span id="bdSortTriggerLabel">Recommended</span>
+                  <svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+                </button>
+                <div class="sort-menu" id="bdSortMenu">
+                  <button class="sort-option active" onclick="sortBrandProducts('recommended',this)" data-sort="recommended">Recommended</button>
+                  <button class="sort-option" onclick="sortBrandProducts('low',this)" data-sort="low">Price: Low to High</button>
+                  <button class="sort-option" onclick="sortBrandProducts('high',this)" data-sort="high">Price: High to Low</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="product-grid" id="bdProductGrid"></div>
+          <div class="no-results" id="bdNoResults" style="display:none">
+            <p>No products yet</p>
+            <span>Products from this brand are coming soon.</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+  <footer>
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="footer-brand-logo">SUSTA</span>
+        <p>A curated edit of women's fashion from brands that care about quality, craft, and longevity.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Shop</h4>
+        <ul>
+          <li onclick="goShop('all')">Shop All</li>
+          <li onclick="goShop('dresses')">Dresses</li>
+          <li onclick="goShop('tops')">Tops</li>
+          <li onclick="goShop('denim')">Denim</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <ul>
+          <li onclick="showPage('about')">Our Story</li>
+          <li onclick="showPage('about')">How We Curate</li>
+          <li>Journal</li>
+          <li>Contact</li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Follow</h4>
+        <ul>
+          <li><a href="https://www.instagram.com/shopsusta/" target="_blank" style="color:inherit;text-decoration:none;">Instagram</a></li>
+          <li>Newsletter</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 SUSTA. All rights reserved.</p>
+      <p>Affiliate links — we may earn a commission at no cost to you.</p>
+    </div>
+  </footer>
 </div>
 
 <div class="page" id="page-about">
@@ -638,7 +754,7 @@
       </div>
       <div class="footer-col">
         <h4>Follow</h4>
-        <ul><li>Instagram</li><li>Pinterest</li><li>Newsletter</li></ul>
+        <ul><li><a href="https://www.instagram.com/shopsusta/" target="_blank" style="color:inherit;text-decoration:none;">Instagram</a></li><li>Newsletter</li></ul>
       </div>
     </div>
     <div class="footer-bottom">

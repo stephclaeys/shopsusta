@@ -565,13 +565,21 @@ function buildEditPages() {
       `<label class="sidebar-check"><input type="checkbox" class="edit-occ-${k}" value="${o}" onchange="runEditFilter('${k}')"><span class="s-check-box"></span><span>${o}</span></label>`
     ).join('');
 
+    // Build list of other edits for sidebar nav
+    const otherEditsHtml = _edits.map(e =>
+      `<span class="sidebar-link${e.key === k ? ' active' : ''}" onclick="showEditPage('${e.key}')">${e.name}</span>`
+    ).join('');
+
     page.innerHTML = `
-      <div class="edit-hero">
-        <div style="position:absolute;inset:0;overflow:hidden;">${mediaHtml}</div>
-        <div class="edit-hero-overlay">
-          <p class="edit-hero-eyebrow">The Edit</p>
-          <h1 class="edit-hero-title">${edit.name}</h1>
-          <p class="edit-hero-sub">${edit.description || ''}</p>
+      <!-- Slim banner -->
+      <div class="edit-hero-slim">
+        <div class="edit-hero-slim-media">${mediaHtml}</div>
+        <div class="edit-hero-slim-content">
+          <div>
+            <p class="edit-hero-slim-eyebrow">The Edit</p>
+            <h1 class="edit-hero-slim-title">${edit.name}</h1>
+          </div>
+          ${edit.description ? `<div class="edit-hero-slim-sep"></div><p class="edit-hero-slim-desc">${edit.description}</p>` : ''}
         </div>
       </div>
 
@@ -584,6 +592,13 @@ function buildEditPages() {
               Close <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
+
+          <!-- Other edits nav in sidebar -->
+          <div class="sidebar-section" style="padding:16px 28px 8px;">
+            <p class="sidebar-title">Edits</p>
+            ${otherEditsHtml}
+          </div>
+          <div class="sidebar-divider"></div>
 
           <div>
             <div class="filter-section-header" onclick="toggleSidebarSection(this)">
@@ -642,10 +657,25 @@ function buildEditPages() {
             </button>
           </div>
           <div class="edit-body">
-            <button class="edit-back" onclick="showPage('home')">← Back to edits</button>
             <div class="edit-body-header">
-              <h2 class="edit-body-title">The Edit</h2>
-              <span class="edit-body-count" id="editCount-${k}"></span>
+              <div>
+                <h2 class="edit-body-title">${edit.name}</h2>
+                <span class="edit-body-count" id="editCount-${k}"></span>
+              </div>
+              <div class="sort-bar" style="margin-bottom:0;">
+                <span class="sort-label">Sort by</span>
+                <div class="sort-dropdown-wrap">
+                  <button class="sort-trigger" id="editSortTrigger-${k}" onclick="toggleEditSortMenu('${k}')">
+                    <span id="editSortLabel-${k}">Recommended</span>
+                    <svg viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+                  </button>
+                  <div class="sort-menu" id="editSortMenu-${k}">
+                    <button class="sort-option active" onclick="sortEditProducts('${k}','recommended',this)">Recommended</button>
+                    <button class="sort-option" onclick="sortEditProducts('${k}','low',this)">Price: Low to High</button>
+                    <button class="sort-option" onclick="sortEditProducts('${k}','high',this)">Price: High to Low</button>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="edit-grid" id="editGrid-${k}">
               <p class="edit-loading">Loading…</p>
@@ -653,7 +683,45 @@ function buildEditPages() {
           </div>
         </div>
 
-      </div>`;
+      </div>
+      <footer>
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <span class="footer-brand-logo">SUSTA</span>
+            <p>A curated edit of women's fashion from brands that care about quality, craft, and longevity.</p>
+          </div>
+          <div class="footer-col">
+            <h4>Shop</h4>
+            <ul>
+              <li onclick="goShop('all')">Shop All</li>
+              <li onclick="goShop('dresses')">Dresses</li>
+              <li onclick="goShop('tops')">Tops</li>
+              <li onclick="goShop('denim')">Denim</li>
+              <li onclick="goShop('shoes')">Shoes</li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>About</h4>
+            <ul>
+              <li onclick="showPage('about')">Our Story</li>
+              <li onclick="showPage('about')">How We Curate</li>
+              <li>Journal</li>
+              <li>Contact</li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Follow</h4>
+            <ul>
+              <li><a href="https://www.instagram.com/shopsusta/" target="_blank" style="color:inherit;text-decoration:none;">Instagram</a></li>
+              <li>Newsletter</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>© 2025 SUSTA. All rights reserved.</p>
+          <p>Affiliate links — we may earn a commission at no cost to you.</p>
+        </div>
+      </footer>`;
 
     document.body.appendChild(page);
   });
@@ -1101,6 +1169,16 @@ function showBrandDetail(brandKey) {
   grid.innerHTML = '<p style="padding:32px 0;color:var(--taupe);font-size:12px;letter-spacing:0.08em">Loading…</p>';
   document.getElementById('bdNoResults').style.display = 'none';
 
+  // Reset sidebar cat filter
+  _bdCurrentCat = 'all';
+  _bdCurrentSort = 'recommended';
+  document.querySelectorAll('#brandShopSidebar .sidebar-link').forEach(l => l.classList.remove('active'));
+  const allLink = document.getElementById('bsb-all');
+  if (allLink) allLink.classList.add('active');
+  const bdSortLabel = document.getElementById('bdSortTriggerLabel');
+  if (bdSortLabel) bdSortLabel.textContent = 'Recommended';
+  document.querySelectorAll('#bdSortMenu .sort-option').forEach((b,i) => b.classList.toggle('active', i===0));
+
   // Query Supabase directly — avoids dataset encoding issues entirely
   sb.from('products').select('*').or('visible.is.null,visible.eq.true').eq('brand', brandKey).order('click_count', { ascending: false })
     .then(({ data: products, error }) => {
@@ -1120,6 +1198,14 @@ function showBrandDetail(brandKey) {
       grid.innerHTML = products.map(renderCard).join('');
       document.getElementById('bdNoResults').style.display = 'none';
       renderLikeStates();
+
+      // Show/hide sidebar category links based on which cats this brand has
+      const cats = new Set(products.map(p => p.category));
+      const catMap = { tops:'bsb-tops', dresses:'bsb-dresses', bottoms:'bsb-bottoms', denim:'bsb-denim', skirts:'bsb-skirts', outerwear:'bsb-outerwear', swim:'bsb-swim', shoes:'bsb-shoes', accessories:'bsb-accessories' };
+      Object.entries(catMap).forEach(([cat, id]) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = cats.has(cat) ? '' : 'none';
+      });
     });
 
   window.scrollTo(0,0);
@@ -1244,6 +1330,121 @@ function sortProducts(mode, btn) {
   visible.forEach(c => grid.appendChild(c));
   hidden.forEach(c => grid.appendChild(c));
 }
+
+// ── BRAND DETAIL — category filter & sort ──────────────────────
+let _bdCurrentCat = 'all';
+let _bdCurrentSort = 'recommended';
+
+function brandSetCat(cat, el) {
+  _bdCurrentCat = cat;
+  document.querySelectorAll('#brandShopSidebar .sidebar-link').forEach(l => l.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const grid = document.getElementById('bdProductGrid');
+  const noResults = document.getElementById('bdNoResults');
+  const cards = Array.from(grid.querySelectorAll('.product-card'));
+  let visible = 0;
+  cards.forEach(card => {
+    const show = cat === 'all' || card.dataset.cat === cat;
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  noResults.style.display = visible === 0 ? 'block' : 'none';
+  const subEl = document.getElementById('bdProductsSub');
+  if (subEl) subEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
+}
+
+function toggleBdSortMenu() {
+  const menu = document.getElementById('bdSortMenu');
+  const trigger = document.getElementById('bdSortTrigger');
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  menu.classList.toggle('open', !isOpen);
+  trigger.classList.toggle('open', !isOpen);
+  // close main shop sort if open
+  closeSortMenu();
+}
+
+function sortBrandProducts(mode, btn) {
+  _bdCurrentSort = mode;
+  const menu = document.getElementById('bdSortMenu');
+  const trigger = document.getElementById('bdSortTrigger');
+  if (menu) menu.classList.remove('open');
+  if (trigger) trigger.classList.remove('open');
+  document.querySelectorAll('#bdSortMenu .sort-option').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const labels = { recommended:'Recommended', low:'Price: Low to High', high:'Price: High to Low' };
+  const labelEl = document.getElementById('bdSortTriggerLabel');
+  if (labelEl) labelEl.textContent = labels[mode] || 'Recommended';
+
+  const grid = document.getElementById('bdProductGrid');
+  const cards = Array.from(grid.querySelectorAll('.product-card'));
+  const visible = cards.filter(c => c.style.display !== 'none');
+  const hidden  = cards.filter(c => c.style.display === 'none');
+
+  function cardPrice(card) {
+    const num = parseFloat((card.dataset.price || '').replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+
+  visible.sort((a, b) => {
+    if (mode === 'low')  return cardPrice(a) - cardPrice(b);
+    if (mode === 'high') return cardPrice(b) - cardPrice(a);
+    return parseInt(a.dataset.id||0) - parseInt(b.dataset.id||0);
+  });
+
+  visible.forEach(c => grid.appendChild(c));
+  hidden.forEach(c => grid.appendChild(c));
+}
+
+// ── EDIT — sort ────────────────────────────
+function toggleEditSortMenu(key) {
+  const menu = document.getElementById('editSortMenu-' + key);
+  const trigger = document.getElementById('editSortTrigger-' + key);
+  if (!menu) return;
+  const isOpen = menu.classList.contains('open');
+  // close all other sort menus
+  document.querySelectorAll('.sort-menu').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.sort-trigger').forEach(t => t.classList.remove('open'));
+  if (!isOpen) {
+    menu.classList.add('open');
+    trigger.classList.add('open');
+  }
+}
+
+function sortEditProducts(key, mode, btn) {
+  const menu = document.getElementById('editSortMenu-' + key);
+  const trigger = document.getElementById('editSortTrigger-' + key);
+  if (menu) menu.classList.remove('open');
+  if (trigger) trigger.classList.remove('open');
+  const menuEl = document.getElementById('editSortMenu-' + key);
+  if (menuEl) menuEl.querySelectorAll('.sort-option').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const labels = { recommended:'Recommended', low:'Price: Low to High', high:'Price: High to Low' };
+  const labelEl = document.getElementById('editSortLabel-' + key);
+  if (labelEl) labelEl.textContent = labels[mode] || 'Recommended';
+
+  const grid = document.getElementById('editGrid-' + key);
+  if (!grid) return;
+  const cards = Array.from(grid.querySelectorAll('.product-card'));
+  const visible = cards.filter(c => c.style.display !== 'none');
+  const hidden  = cards.filter(c => c.style.display === 'none');
+
+  function cardPrice(card) {
+    const num = parseFloat((card.dataset.price || '').replace(/[^0-9.]/g, ''));
+    return isNaN(num) ? 0 : num;
+  }
+
+  visible.sort((a, b) => {
+    if (mode === 'low')  return cardPrice(a) - cardPrice(b);
+    if (mode === 'high') return cardPrice(b) - cardPrice(a);
+    return parseInt(a.dataset.id||0) - parseInt(b.dataset.id||0);
+  });
+
+  visible.forEach(c => grid.appendChild(c));
+  hidden.forEach(c => grid.appendChild(c));
+}
+
 
 // ══════════════════════════════════════════
 // FILTER PANEL — legacy stubs
@@ -2144,6 +2345,23 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('click', e => {
+  // Close main shop sort menu
   const sortWrap = document.getElementById('sortMenu')?.closest('.sort-dropdown-wrap');
   if (sortWrap && !sortWrap.contains(e.target)) closeSortMenu();
+
+  // Close brand sort menu
+  const bdSortWrap = document.getElementById('bdSortMenu')?.closest('.sort-dropdown-wrap');
+  if (bdSortWrap && !bdSortWrap.contains(e.target)) {
+    document.getElementById('bdSortMenu')?.classList.remove('open');
+    document.getElementById('bdSortTrigger')?.classList.remove('open');
+  }
+
+  // Close all edit sort menus
+  document.querySelectorAll('[id^="editSortMenu-"]').forEach(menu => {
+    const wrap = menu.closest('.sort-dropdown-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      menu.classList.remove('open');
+      menu.closest('.sort-dropdown-wrap')?.querySelector('.sort-trigger')?.classList.remove('open');
+    }
+  });
 });

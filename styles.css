@@ -122,7 +122,7 @@ nav {
 .edit-hero-title { font-family: var(--serif); font-size: 58px; font-weight: 300; color: #fff; line-height: 1.05; margin-bottom: 16px; }
 .edit-hero-sub { font-size: 12px; color: rgba(255,255,255,0.7); letter-spacing: 0.04em; max-width: 360px; line-height: 1.8; }
 .edit-body { padding: 40px 40px 80px; background: var(--warm-white); }
-.edit-body-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 40px; border-bottom: 0.5px solid var(--stone); padding-bottom: 20px; }
+.edit-body-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; border-bottom: 0.5px solid var(--stone); padding-bottom: 20px; gap: 16px; }
 .edit-body-title { font-family: var(--serif); font-size: 22px; font-weight: 300; }
 .edit-body-count { font-size: 11px; color: var(--taupe); }
 .edit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
@@ -687,9 +687,47 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
 .goy-link { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--taupe); border-bottom: 0.5px solid var(--stone); padding-bottom: 2px; display: inline-block; transition: color 0.2s, border-color 0.2s; }
 .goy-link:hover { color: var(--accent); border-color: var(--accent); }
 .goy-flag { margin-top: 16px; font-size: 11px; color: var(--taupe); font-style: italic; line-height: 1.7; }
-.brand-products-section { padding: 48px 40px 0; }
-.brand-products-section h2 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dark); margin-bottom: 8px; }
-.brand-products-section > p { font-size: 11px; color: var(--taupe); margin-bottom: 32px; }
+.brand-products-section { padding: 0; }
+.brand-products-section h2 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dark); margin-bottom: 4px; }
+.brand-products-section > p { font-size: 11px; color: var(--taupe); margin-bottom: 0; }
+
+/* Brand shop layout — sidebar + products */
+.brand-shop-layout { display: grid; grid-template-columns: 220px 1fr; }
+.brand-shop-sidebar {
+  border-right: 0.5px solid var(--stone);
+  padding: 32px 0;
+  position: sticky; top: var(--nav-h);
+  height: calc(100vh - var(--nav-h));
+  overflow-y: auto;
+  background: var(--warm-white);
+}
+.brand-shop-main { padding: 32px 40px 64px; background: var(--cream); }
+.brand-shop-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; margin-bottom: 28px;
+  padding-bottom: 20px; border-bottom: 0.5px solid var(--stone);
+}
+.brand-shop-header h2 { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dark); margin-bottom: 4px; }
+.brand-shop-header > div > p { font-size: 11px; color: var(--taupe); }
+
+/* Edit page — slim banner variant */
+.edit-hero-slim {
+  position: relative; overflow: hidden;
+  height: 120px; background: var(--dark);
+  display: flex; align-items: center;
+}
+.edit-hero-slim-media { position: absolute; inset: 0; }
+.edit-hero-slim-media img,
+.edit-hero-slim-media video { width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
+.edit-hero-slim-content {
+  position: relative; z-index: 2;
+  padding: 0 40px;
+  display: flex; align-items: center; gap: 24px;
+}
+.edit-hero-slim-eyebrow { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+.edit-hero-slim-title { font-family: var(--serif); font-size: 32px; font-weight: 300; color: #fff; line-height: 1.05; }
+.edit-hero-slim-sep { width: 1px; height: 36px; background: rgba(255,255,255,0.25); flex-shrink: 0; }
+.edit-hero-slim-desc { font-size: 12px; color: rgba(255,255,255,0.65); max-width: 340px; line-height: 1.7; }
 
 
 /* ════════════════════════════════════════════════
@@ -888,7 +926,16 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
   .brand-detail-hero { grid-template-columns: 1fr; gap: 32px; padding: 32px 20px; }
   .brand-detail-back { margin-bottom: 16px; }
   .brand-detail-name-hed { font-size: 30px; }
-  .brand-products-section { padding: 32px 20px 0; }
+  .brand-products-section { padding: 0; }
+  .brand-shop-layout { grid-template-columns: 1fr; }
+  .brand-shop-sidebar { display: none; }
+  .brand-shop-main { padding: 24px 20px 64px; }
+  .brand-shop-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .edit-hero-slim { height: 90px; }
+  .edit-hero-slim-content { padding: 0 20px; }
+  .edit-hero-slim-title { font-size: 22px; }
+  .edit-hero-slim-desc { display: none; }
+  .edit-hero-slim-sep { display: none; }
 
   /* ── About page ── */
   .about-page { padding: 40px 20px; }
