@@ -322,14 +322,14 @@ async function initShopCount() {
     // Always query by id — reliable fallback, click_count column may not exist yet
     let data = null;
     try {
-      const r1 = await sb.from('products').select('*').order('click_count', { ascending: false });
+      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('click_count', { ascending: false });
       if (!r1.error && r1.data) data = r1.data;
     } catch(e) {}
 
     // Fallback to ordering by id if click_count failed or returned nothing
     if (!data) {
       try {
-        const r2 = await sb.from('products').select('*').order('id');
+        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id');
         if (!r2.error && r2.data) data = r2.data;
       } catch(e) {}
     }
@@ -375,6 +375,7 @@ async function initHomeDuo() {
   const { data: newest } = await sb
     .from('products')
     .select('*')
+    .or('visible.is.null,visible.eq.true')
     .order('id', { ascending: false })
     .limit(50);
 
@@ -476,7 +477,6 @@ async function loadEdits() {
   buildSidebarEdits();
 }
 
-// ── Sidebar edits list — mirrors active edits from DB ──
 function buildSidebarEdits() {
   const section = document.getElementById('sidebarEditsSection');
   const links   = document.getElementById('sidebarEditLinks');
@@ -547,7 +547,6 @@ function buildMegaMenuEdits() {
 
 // ── Edit pages — create them dynamically ──
 function buildEditPages() {
-  // Remove any old dynamically created edit pages
   document.querySelectorAll('.page[data-dynamic-edit]').forEach(p => p.remove());
 
   _edits.forEach(edit => {
@@ -556,11 +555,15 @@ function buildEditPages() {
     page.id = 'page-edit-' + edit.key;
     page.dataset.dynamicEdit = '1';
 
+    const k = edit.key;
     const mediaHtml = edit.hero_video_url
-      ? `<video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;">
-           <source src="${edit.hero_video_url}" type="video/mp4">
-         </video>`
+      ? `<video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"><source src="${edit.hero_video_url}" type="video/mp4"></video>`
       : `<img src="${edit.hero_image_url || ''}" style="width:100%;height:100%;object-fit:cover;" alt="${edit.name}">`;
+
+    const occasions = ['Weekend Wear','Formal','Beach Ready','Office Attire','Night Out','Off-Duty'];
+    const occHtml = occasions.map(o =>
+      `<label class="sidebar-check"><input type="checkbox" class="edit-occ-${k}" value="${o}" onchange="runEditFilter('${k}')"><span class="s-check-box"></span><span>${o}</span></label>`
+    ).join('');
 
     page.innerHTML = `
       <div class="edit-hero">
@@ -571,15 +574,85 @@ function buildEditPages() {
           <p class="edit-hero-sub">${edit.description || ''}</p>
         </div>
       </div>
-      <div class="edit-body">
-        <button class="edit-back" onclick="showPage('home')">← Back to edits</button>
-        <div class="edit-body-header">
-          <h2 class="edit-body-title">The Edit</h2>
-          <span class="edit-body-count" id="editCount-${edit.key}"></span>
+
+      <div class="edit-layout">
+
+        <aside class="edit-sidebar" id="editSidebar-${k}">
+          <div class="sidebar-drawer-header">
+            <span class="sidebar-drawer-title">Filters</span>
+            <button class="sidebar-drawer-close" onclick="closeMobileEditSidebar('${k}')">
+              Close <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <div>
+            <div class="filter-section-header" onclick="toggleSidebarSection(this)">
+              <span class="filter-section-label">Occasion</span>
+              <svg class="filter-section-arrow" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="filter-section-body" style="max-height:300px">
+              <div class="sidebar-check-list">${occHtml}</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="filter-section-header" onclick="toggleSidebarSection(this)">
+              <span class="filter-section-label">Colour</span>
+              <svg class="filter-section-arrow" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="filter-section-body" style="max-height:220px">
+              <div class="sidebar-colour-grid" id="editSwatches-${k}"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="filter-section-header" onclick="toggleSidebarSection(this)">
+              <span class="filter-section-label">Price</span>
+              <svg class="filter-section-arrow" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="filter-section-body" style="max-height:100px">
+              <div class="price-range-labels">
+                <span id="editPriceMinLbl-${k}">$0</span>
+                <span id="editPriceMaxLbl-${k}">$1000+</span>
+              </div>
+              <div class="price-track">
+                <div class="price-fill" id="editPriceFill-${k}"></div>
+                <input type="range" class="price-slider price-slider-min" id="editSliderMin-${k}" min="0" max="1000" value="0" oninput="onEditPriceChange('${k}')">
+                <input type="range" class="price-slider price-slider-max" id="editSliderMax-${k}" min="0" max="1000" value="1000" oninput="onEditPriceChange('${k}')">
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="filter-section-header" onclick="toggleSidebarSection(this)">
+              <span class="filter-section-label">Brand</span>
+              <svg class="filter-section-arrow" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+            </div>
+            <div class="filter-section-body" style="max-height:300px">
+              <div class="sidebar-check-list" id="editBrandList-${k}"></div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="edit-main">
+          <div class="edit-cat-bar mobile-only">
+            <button class="cat-bar-filter-btn" onclick="toggleMobileEditSidebar('${k}')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+              Filter
+            </button>
+          </div>
+          <div class="edit-body">
+            <button class="edit-back" onclick="showPage('home')">← Back to edits</button>
+            <div class="edit-body-header">
+              <h2 class="edit-body-title">The Edit</h2>
+              <span class="edit-body-count" id="editCount-${k}"></span>
+            </div>
+            <div class="edit-grid" id="editGrid-${k}">
+              <p class="edit-loading">Loading…</p>
+            </div>
+          </div>
         </div>
-        <div class="edit-grid" id="editGrid-${edit.key}">
-          <p class="edit-loading">Loading…</p>
-        </div>
+
       </div>`;
 
     document.body.appendChild(page);
@@ -588,17 +661,16 @@ function buildEditPages() {
 
 // ── Show an edit page and load its products ──
 function showEditPage(key) {
-  // If edits haven't been built yet (still loading), poll until the page div exists
   if (!document.getElementById('page-edit-' + key)) {
     const poll = setInterval(() => {
       if (document.getElementById('page-edit-' + key)) {
         clearInterval(poll);
-        showPage('edit-' + key); // showPage calls loadEditProducts internally
+        showPage('edit-' + key);
       }
     }, 100);
     return;
   }
-  showPage('edit-' + key); // showPage calls loadEditProducts internally
+  showPage('edit-' + key);
 }
 
 async function loadEditProducts(key) {
@@ -629,6 +701,7 @@ async function loadEditProducts(key) {
   const { data: products, error: pErr } = await sb
     .from('products')
     .select('*')
+    .or('visible.is.null,visible.eq.true')
     .in('id', productIds);
 
   if (pErr || !products || !products.length) {
@@ -643,6 +716,7 @@ async function loadEditProducts(key) {
   grid.innerHTML = products.map(p => renderEditCard(p)).join('');
   countEl.textContent = products.length + ' piece' + (products.length !== 1 ? 's' : '');
   _editLoaded[key] = true;
+  buildEditSidebarControls(key, products);
   renderLikeStates();
 }
 
@@ -1028,7 +1102,7 @@ function showBrandDetail(brandKey) {
   document.getElementById('bdNoResults').style.display = 'none';
 
   // Query Supabase directly — avoids dataset encoding issues entirely
-  sb.from('products').select('*').eq('brand', brandKey).order('click_count', { ascending: false })
+  sb.from('products').select('*').or('visible.is.null,visible.eq.true').eq('brand', brandKey).order('click_count', { ascending: false })
     .then(({ data: products, error }) => {
       if (error || !products) {
         grid.innerHTML = '';
@@ -1862,6 +1936,116 @@ function runCombinedFilter() {
   if (_currentSort && _currentSort !== 'recommended') {
     sortProducts(_currentSort, null);
   }
+}
+
+
+// ══════════════════════════════════════════
+// EDIT PAGE — sidebar filter functions
+// ══════════════════════════════════════════
+function buildEditSidebarControls(key, products) {
+  // Colour swatches
+  const swatchEl = document.getElementById('editSwatches-' + key);
+  if (swatchEl) {
+    swatchEl.innerHTML = SIDEBAR_COLOURS.map(c =>
+      `<button class="sidebar-colour-swatch edit-swatch-${key}" title="${c.label}"
+               data-key="${c.key}" style="background:${c.hex}"
+               onclick="toggleEditColour('${key}','${c.key}',this)"></button>`
+    ).join('');
+  }
+  // Brand list — only brands present in this edit
+  const brandEl = document.getElementById('editBrandList-' + key);
+  if (brandEl) {
+    const brands = [...new Set(products.map(p => p.brand))].sort();
+    brandEl.innerHTML = brands.map(b =>
+      `<label class="sidebar-check">
+        <input type="checkbox" class="edit-brand-${key}" value="${b}" onchange="runEditFilter('${key}')">
+        <span class="s-check-box"></span><span>${BRAND_LABELS[b] || b}</span>
+      </label>`
+    ).join('');
+  }
+}
+
+function toggleEditColour(key, colorKey, el) {
+  el.classList.toggle('active');
+  runEditFilter(key);
+}
+
+function onEditPriceChange(key) {
+  const minEl = document.getElementById('editSliderMin-' + key);
+  const maxEl = document.getElementById('editSliderMax-' + key);
+  if (!minEl || !maxEl) return;
+  let min = parseInt(minEl.value), max = parseInt(maxEl.value);
+  if (min > max) { [min, max] = [max, min]; minEl.value = min; maxEl.value = max; }
+  const minLbl = document.getElementById('editPriceMinLbl-' + key);
+  const maxLbl = document.getElementById('editPriceMaxLbl-' + key);
+  if (minLbl) minLbl.textContent = '$' + min;
+  if (maxLbl) maxLbl.textContent = max >= 1000 ? '$1000+' : '$' + max;
+  const fill = document.getElementById('editPriceFill-' + key);
+  if (fill) { fill.style.left = (min/10)+'%'; fill.style.width = ((max-min)/10)+'%'; }
+  runEditFilter(key);
+}
+
+function runEditFilter(key) {
+  const page = document.getElementById('page-edit-' + key);
+  if (!page) return;
+
+  const selOcc    = new Set(Array.from(page.querySelectorAll(`.edit-occ-${key}:checked`)).map(e => e.value.toLowerCase()));
+  const selColour = new Set(Array.from(page.querySelectorAll(`.edit-swatch-${key}.active`)).map(e => e.dataset.key));
+  const selBrand  = new Set(Array.from(page.querySelectorAll(`.edit-brand-${key}:checked`)).map(e => e.value));
+  const priceMin  = parseInt(document.getElementById('editSliderMin-' + key)?.value || 0);
+  const priceMax  = parseInt(document.getElementById('editSliderMax-' + key)?.value || 1000);
+
+  const hasOcc    = selOcc.size > 0;
+  const hasColour = selColour.size > 0;
+  const hasBrand  = selBrand.size > 0;
+  const hasPrMin  = priceMin > 0;
+  const hasPrMax  = priceMax < 1000;
+
+  let visible = 0;
+  page.querySelectorAll('.product-card').forEach(card => {
+    let show = true;
+    if (hasBrand  && !selBrand.has(card.dataset.brand)) show = false;
+    if (show && hasColour) {
+      const c = (card.dataset.color || '').toLowerCase();
+      if (!c || !selColour.has(c)) show = false;
+    }
+    if (show && hasOcc) {
+      const occ = (card.dataset.occasion || '').toLowerCase();
+      if (![...selOcc].some(o => occ.includes(o))) show = false;
+    }
+    if (show && (hasPrMin || hasPrMax)) {
+      const price = parsePrice(card.dataset.price);
+      if (price > 0 && hasPrMin && price < priceMin) show = false;
+      if (price > 0 && hasPrMax && price > priceMax) show = false;
+    }
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+
+  const countEl = document.getElementById('editCount-' + key);
+  if (countEl) countEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
+  renderLikeStates();
+}
+
+function toggleMobileEditSidebar(key) {
+  const sidebar   = document.getElementById('editSidebar-' + key);
+  const backdrop  = document.getElementById('shopSidebarBackdrop');
+  if (!sidebar) return;
+  const isOpen = sidebar.classList.contains('mobile-open');
+  if (isOpen) { closeMobileEditSidebar(key); }
+  else {
+    sidebar.classList.add('mobile-open');
+    if (backdrop) backdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeMobileEditSidebar(key) {
+  const sidebar  = document.getElementById('editSidebar-' + key);
+  const backdrop = document.getElementById('shopSidebarBackdrop');
+  if (sidebar)   sidebar.classList.remove('mobile-open');
+  if (backdrop)  backdrop.classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ══════════════════════════════════════════
