@@ -571,18 +571,6 @@ function buildEditPages() {
     ).join('');
 
     page.innerHTML = `
-      <!-- Slim banner -->
-      <div class="edit-hero-slim">
-        <div class="edit-hero-slim-media">${mediaHtml}</div>
-        <div class="edit-hero-slim-content">
-          <div>
-            <p class="edit-hero-slim-eyebrow">The Edit</p>
-            <h1 class="edit-hero-slim-title">${edit.name}</h1>
-          </div>
-          ${edit.description ? `<div class="edit-hero-slim-sep"></div><p class="edit-hero-slim-desc">${edit.description}</p>` : ''}
-        </div>
-      </div>
-
       <div class="edit-layout">
 
         <aside class="edit-sidebar" id="editSidebar-${k}">
@@ -656,6 +644,17 @@ function buildEditPages() {
               Filter
             </button>
           </div>
+          <!-- Slim banner — sits only above products, sidebar runs alongside it -->
+          <div class="edit-hero-slim">
+            <div class="edit-hero-slim-media">${mediaHtml}</div>
+            <div class="edit-hero-slim-content">
+              <div>
+                <p class="edit-hero-slim-eyebrow">The Edit</p>
+                <h1 class="edit-hero-slim-title">${edit.name}</h1>
+              </div>
+              ${edit.description ? `<div class="edit-hero-slim-sep"></div><p class="edit-hero-slim-desc">${edit.description}</p>` : ''}
+            </div>
+          </div>
           <div class="edit-body">
             <div class="edit-body-header">
               <div>
@@ -713,7 +712,6 @@ function buildEditPages() {
             <h4>Follow</h4>
             <ul>
               <li><a href="https://www.instagram.com/shopsusta/" target="_blank" style="color:inherit;text-decoration:none;">Instagram</a></li>
-              <li>Newsletter</li>
             </ul>
           </div>
         </div>
