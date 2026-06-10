@@ -248,6 +248,7 @@ function sidebarFilter(cat, el) {
           'shorts': ['short', 'shorts'],
           'bikini': ['bikini', 'two-piece'],
           'one-piece': ['one-piece', 'one piece', 'swimsuit', 'monokini'],
+          'heels': ['heel', 'heels', 'pump', 'pumps', 'stiletto', 'slingback', 'kitten heel'],
           'necklaces': ['necklace', 'pendant', 'chain'],
           'earrings': ['earring', 'ear ring', 'stud', 'hoop'],
           'rings': ['ring'],
@@ -1002,6 +1003,32 @@ function getLikes() { return _likes; }
 // BRAND_REGISTRY — loaded from Supabase brands table
 let BRAND_REGISTRY = {};
 
+// Normalize any Good On You rating value coming from the DB into one of the
+// three canonical labels the UI knows how to render.
+// Accepts the numeric Good On You scale (5 Great, 4 Good, 3 It's a Start,
+// 2 Not Good Enough, 1 We Avoid) AND text values, the latter reduced to
+// lowercase letters only to absorb casing, spaces, non-breaking/zero-width
+// characters, punctuation, and apostrophe variants.
+// Returns null for empty/unrecognized values and for tiers the UI doesn't
+// style (1 and 2), which render as "not yet rated".
+function normalizeGoyScore(raw) {
+  if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+  // Numeric scale (handles 3/4/5 and any half-steps like 4.5)
+  const num = Number(raw);
+  if (!Number.isNaN(num)) {
+    if (num >= 4.5) return 'Great';
+    if (num >= 3.5) return 'Good';
+    if (num >= 2.5) return "It's a Start";
+    return null;
+  }
+  // Text values
+  const letters = String(raw).toLowerCase().replace(/[^a-z]/g, '');
+  if (letters === 'great') return 'Great';
+  if (letters === 'good') return 'Good';
+  if (letters === 'itsastart' || letters === 'start') return "It's a Start";
+  return null;
+}
+
 async function loadBrandRegistry() {
   const { data, error } = await sb.from('brands').select('*');
   if (error || !data) return;
@@ -1013,10 +1040,10 @@ async function loadBrandRegistry() {
       logo:       b.logo,
       about:      b.about,
       goy: {
-        overall: b.goy_overall,
-        planet:  b.goy_planet,
-        people:  b.goy_people,
-        animals: b.goy_animals,
+        overall: normalizeGoyScore(b.goy_overall),
+        planet:  normalizeGoyScore(b.goy_planet),
+        people:  normalizeGoyScore(b.goy_people),
+        animals: normalizeGoyScore(b.goy_animals),
         url:     b.goy_url,
       },
       goyFlag: null,
@@ -1520,7 +1547,8 @@ const COLOR_BUCKETS = [
   { key: 'black',     label: 'Black',     words: ['black','noir','onyx','jet','ebony','carbon'] },
   { key: 'white',     label: 'White',     words: ['white','ivory','cream','ecru','off-white','offwhite','chalk','snow','vanilla'] },
   { key: 'grey',      label: 'Grey',      words: ['grey','gray','slate','charcoal','silver','ash','smoke','stone','mist'] },
-  { key: 'tan',       label: 'Tan',       words: ['tan','sand','beige','camel','nude','natural','oat','biscuit','wheat','buff','linen','taupe','truffle','dune','fawn'] },
+  { key: 'tan',       label: 'Tan',       words: ['tan','sand','beige','camel','nude','natural','oat','biscuit','wheat','buff','linen','taupe','dune','fawn'] },
+  { key: 'brown',     label: 'Brown',     words: ['brown','chocolate','coffee','espresso','mocha','cocoa','walnut','chestnut','mahogany','umber','tobacco','caramel','toffee','hazelnut','pecan','hickory','truffle','choc'] },
   { key: 'red',       label: 'Red',       words: ['red','crimson','scarlet','burgundy','wine','bordeaux','cherry','raspberry','rust','terracotta','auburn','sienna','brick','maroon'] },
   { key: 'pink',      label: 'Pink',      words: ['pink','blush','rose','coral','salmon','peach','mauve','dusty rose','ballet','candy','flamingo','magenta','fuchsia'] },
   { key: 'orange',    label: 'Orange',    words: ['orange','burnt','apricot','amber','ginger','pumpkin','paprika','copper','bronze','cognac'] },
@@ -1562,13 +1590,19 @@ async function toggleFlag(e, btn) {
     btn.classList.add('flagged');
     btn.title = 'Flagged — thank you!';
     // Save to Supabase — insert a new row (anyone can flag, no login needed)
-    try {
-      await sb.from('product_flags').insert({
-        product_id: parseInt(id),
-        session_id: getSessionId(),
-        flagged_at: new Date().toISOString()
-      });
-    } catch(err) {}
+    const { error } = await sb.from('product_flags').insert({
+      product_id: parseInt(id),
+      session_id: getSessionId(),
+      flagged_at: new Date().toISOString()
+    });
+    if (error) {
+      // Write was rejected (commonly a missing row-level-security policy).
+      // Don't leave the UI claiming a save that didn't happen.
+      console.error('Flag insert failed:', error.message, error);
+      _flagged.delete(id);
+      btn.classList.remove('flagged');
+      btn.title = 'Flag as unavailable';
+    }
   }
 }
 
@@ -2088,6 +2122,7 @@ const SIDEBAR_COLOURS = [
   { key:'white',  label:'White',  hex:'#ffffff' },
   { key:'grey',   label:'Grey',   hex:'#9e9e9e' },
   { key:'tan',    label:'Tan',    hex:'#c8a882' },
+  { key:'brown',  label:'Brown',  hex:'#6b4226' },
   { key:'red',    label:'Red',    hex:'#c1302a' },
   { key:'pink',   label:'Pink',   hex:'#e8748a' },
   { key:'orange', label:'Orange', hex:'#e07830' },
@@ -2269,6 +2304,7 @@ function runCombinedFilter() {
           'long-sleeve':['long sleeve'],knit:['knit','sweater','jumper','cardigan'],
           mini:['mini'],midi:['midi'],long:['maxi','long','floor'],
           shorts:['short','shorts'],bikini:['bikini','two-piece'],'one-piece':['one-piece','one piece','swimsuit'],
+          heels:['heel','heels','pump','pumps','stiletto','slingback'],
           necklaces:['necklace','pendant','chain'],earrings:['earring','stud','hoop'],
           rings:['ring'],bracelets:['bracelet','bangle'],bags:['bag','tote','clutch'],
           sunnies:['sunglass','sunnies'],hair:['hair','scrunchie','clip']
