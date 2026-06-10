@@ -1747,7 +1747,7 @@ function renderLikesPanel(activeTab) {
   const tab = activeTab || 'products';
   const body = document.getElementById('likesPanelBody');
   if (!currentUser) {
-    body.innerHTML = `<div class="likes-prompt"><p>Sign in to see your likes</p><button onclick="closeAllPanels();openProfilePanel()">Sign In / Create Account</button></div>`;
+    body.innerHTML = `<div class="likes-prompt"><p>Save the pieces you love</p><span>Sign in to keep a shortlist of your favourites.</span><button onclick="closeAllPanels();openProfilePanel()">Sign In / Create Account</button></div>`;
     return;
   }
   const likes = getLikes();
