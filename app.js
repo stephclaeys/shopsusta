@@ -5,22 +5,22 @@
 // PAGE META — updates <title> and meta description per page
 // ══════════════════════════════════════════
 const PAGE_META = {
-  home:    { title: 'SUSTA — Sustainable Women's Fashion', desc: 'Curated sustainable women's fashion from the world's best ethical brands. Discover pieces that look good and do good.' },
-  shop:    { title: 'Shop Sustainable Women's Clothing — SUSTA', desc: 'Browse curated sustainable women's clothing from ethical brands including Reformation, Christy Dawn, Spell, MUD Jeans and more.' },
-  brands:  { title: 'Sustainable Fashion Brands — SUSTA', desc: 'Discover our curated directory of sustainable and ethical women's fashion brands, each rated by Good On You.' },
-  about:   { title: 'About SUSTA — Sustainable Fashion Curated', desc: 'SUSTA curates sustainable women's fashion from brands that are genuinely doing things differently. Fashion that gives a damn.' },
+  home:    { title: "SUSTA — Sustainable Women's Fashion", desc: "Curated sustainable women's fashion from the world's best ethical brands. Discover pieces that look good and do good." },
+  shop:    { title: "Shop Sustainable Women's Clothing — SUSTA", desc: "Browse curated sustainable women's clothing from ethical brands including Reformation, Christy Dawn, Spell, MUD Jeans and more." },
+  brands:  { title: "Sustainable Fashion Brands — SUSTA", desc: "Discover our curated directory of sustainable and ethical women's fashion brands, each rated by Good On You." },
+  about:   { title: "About SUSTA — Sustainable Fashion Curated", desc: "SUSTA curates sustainable women's fashion from brands that are genuinely doing things differently. Fashion that gives a damn." },
 };
 const CAT_META = {
-  all:         { title: 'Shop All Sustainable Women's Clothing — SUSTA', desc: 'Browse all curated sustainable women's clothing and accessories from ethical brands.' },
-  dresses:     { title: 'Sustainable Dresses — SUSTA', desc: 'Shop sustainable and ethical women's dresses from Christy Dawn, Reformation, Spell and more.' },
-  tops:        { title: 'Sustainable Tops — SUSTA', desc: 'Curated sustainable women's tops from ethical brands using organic and natural materials.' },
-  denim:       { title: 'Sustainable Denim Jeans — SUSTA', desc: 'Shop ethical and circular denim from MUD Jeans, Nudie Jeans, Outland Denim and more.' },
-  bottoms:     { title: 'Sustainable Bottoms & Trousers — SUSTA', desc: 'Ethical women's trousers, skirts and bottoms from sustainable brands.' },
-  skirts:      { title: 'Sustainable Skirts — SUSTA', desc: 'Shop ethical women's skirts in natural and organic fabrics.' },
-  outerwear:   { title: 'Sustainable Outerwear — SUSTA', desc: 'Ethical and sustainable jackets and coats for women.' },
-  swim:        { title: 'Sustainable Swimwear — SUSTA', desc: 'Shop ethical and sustainable women's swimwear made with recycled and natural materials.' },
-  shoes:       { title: 'Sustainable Shoes & Footwear — SUSTA', desc: 'Ethical and vegan women's shoes from sustainable brands.' },
-  accessories: { title: 'Sustainable Accessories — SUSTA', desc: 'Curated ethical jewellery and accessories from sustainable brands.' },
+  all:         { title: "Shop All Sustainable Women's Clothing — SUSTA", desc: "Browse all curated sustainable women's clothing and accessories from ethical brands." },
+  dresses:     { title: "Sustainable Dresses — SUSTA", desc: "Shop sustainable and ethical women's dresses from Christy Dawn, Reformation, Spell and more." },
+  tops:        { title: "Sustainable Tops — SUSTA", desc: "Curated sustainable women's tops from ethical brands using organic and natural materials." },
+  denim:       { title: "Sustainable Denim Jeans — SUSTA", desc: "Shop ethical and circular denim from MUD Jeans, Nudie Jeans, Outland Denim and more." },
+  bottoms:     { title: "Sustainable Bottoms & Trousers — SUSTA", desc: "Ethical women's trousers, skirts and bottoms from sustainable brands." },
+  skirts:      { title: "Sustainable Skirts — SUSTA", desc: "Shop ethical women's skirts in natural and organic fabrics." },
+  outerwear:   { title: "Sustainable Outerwear — SUSTA", desc: "Ethical and sustainable jackets and coats for women." },
+  swim:        { title: "Sustainable Swimwear — SUSTA", desc: "Shop ethical and sustainable women's swimwear made with recycled and natural materials." },
+  shoes:       { title: "Sustainable Shoes & Footwear — SUSTA", desc: "Ethical and vegan women's shoes from sustainable brands." },
+  accessories: { title: "Sustainable Accessories — SUSTA", desc: "Curated ethical jewellery and accessories from sustainable brands." },
 };
 
 function updatePageMeta(page, cat, brandLabel) {
@@ -33,7 +33,7 @@ function updatePageMeta(page, cat, brandLabel) {
     desc  = 'Shop ' + brandLabel + ' on SUSTA. Discover their sustainable and ethical clothing range.';
   } else if (page === 'edit' && cat) {
     title = cat + ' — SUSTA Edit';
-    desc  = 'A curated edit of sustainable women's fashion on SUSTA.';
+    desc  = "A curated edit of sustainable women's fashion on SUSTA.";
   } else if (PAGE_META[page]) {
     title = PAGE_META[page].title;
     desc  = PAGE_META[page].desc;
