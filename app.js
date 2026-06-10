@@ -276,7 +276,7 @@ function escAttr(s) {
 }
 
 function renderCard(p) {
-  const brandLabel = BRAND_LABELS[p.brand] || p.brand;
+  const brandLabel = (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand;
   const tagClass = p.tag_type === 'eco' ? 'eco' : 'standard';
   const displayPrice = formatPrice(p.price, p.brand);
   const imgHtml = p.image_url
@@ -1256,7 +1256,7 @@ function handleSearch(query) {
   }
 
   resultsEl.innerHTML = matches.map(p => {
-    const brandLabel = BRAND_LABELS[p.brand] || p.brand;
+    const brandLabel = (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand;
     const imgHtml = p.image_url
       ? `<img class="search-result-img" src="${escAttr(p.image_url)}" alt="${escAttr(p.name)}" onerror="this.style.display='none'">`
       : `<div class="search-result-img"></div>`;
@@ -1607,10 +1607,7 @@ async function toggleLike(e, btn) {
   }
   updateLikesBadge();
   if (openPanel === 'likesPanel') renderLikesPanel();
-  if (openPanel === 'profilePanel') renderProfilePanel();
-}
-
-async function removeLike(id) {
+  if (openPanel === 'profilePanel') renderProfilePanel();(id) {
   _likes = _likes.filter(l => String(l) !== String(id));
   // Update heart button if card happens to be in DOM
   const btn = document.querySelector(`.product-card[data-id="${id}"] .like-btn`);
@@ -1646,7 +1643,7 @@ function closeAllPanels() {
 }
 function _openPanel(id) { closeAllPanels(); document.getElementById(id).classList.add('open'); document.getElementById('panelBackdrop').classList.add('open'); openPanel = id; }
 function openProfilePanel() { renderProfilePanel(); _openPanel('profilePanel'); }
-function openLikesPanel() { renderLikesPanel(); _openPanel('likesPanel'); }
+function openLikesPanel() { renderLikesPanel().then(() => _openPanel('likesPanel')); }
 
 function renderProfilePanel() {
   const body = document.getElementById('profilePanelBody');
@@ -1745,7 +1742,7 @@ async function doResetPassword() {
   }
 }
 
-function renderLikesPanel(activeTab) {
+async function renderLikesPanel(activeTab) {
   const tab = activeTab || 'products';
   const body = document.getElementById('likesPanelBody');
   if (!currentUser) {
@@ -1760,19 +1757,39 @@ function renderLikesPanel(activeTab) {
       <button class="likes-panel-tab ${tab==='brands'?'active':''}" onclick="renderLikesPanel('brands')">Brands</button>
     </div>`;
 
+  // Helper: get liked product data — from cache if ready, else fetch direct from Supabase
+  async function getLikedProductData(fields) {
+    const ids = likes.map(id => parseInt(id, 10)).filter(Boolean);
+    if (!ids.length) return [];
+    if (_allProducts.length) {
+      return ids.map(id => _allProducts.find(p => p.id === id)).filter(Boolean);
+    }
+    const sel = fields || '*';
+    const { data } = await sb.from('products').select(sel).in('id', ids);
+    return data || [];
+  }
+
   if (tab === 'products') {
     if (!likes.length) {
       body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
       return;
     }
-    // Build from _allProducts data — works regardless of which page is active
+    body.innerHTML = tabBar + `<p style="padding:24px;font-size:11px;color:var(--taupe);letter-spacing:0.06em">Loading…</p>`;
+
+    const rawProducts = await getLikedProductData('*');
+    // Re-order to match _likes order (newest liked first)
     const likedProducts = [...likes].reverse()
-      .map(id => _allProducts.find(p => String(p.id) === String(id)))
+      .map(id => rawProducts.find(p => String(p.id) === String(id)))
       .filter(Boolean);
+
+    if (!likedProducts.length) {
+      body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
+      return;
+    }
 
     const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedProductsPage()">Shop All Liked (${likes.length}) →</button>`;
     const grid = `<div class="liked-grid">${likedProducts.map(p => {
-      const brandLabel = BRAND_LABELS[p.brand] || p.brand;
+      const brandLabel = (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand;
       const displayPrice = formatPrice(p.price, p.brand);
       return `
         <div class="liked-card">
@@ -1790,23 +1807,23 @@ function renderLikesPanel(activeTab) {
     body.innerHTML = tabBar + shopAllBtn + grid;
 
   } else {
-    // Brands tab — unique brands from liked products
+    // Brands tab
     if (!likes.length) {
       body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Like some products to see your favourite brands here</span></div>`;
       return;
     }
-    const likedProducts = likes
-      .map(id => _allProducts.find(p => String(p.id) === String(id)))
-      .filter(Boolean);
-    // Unique brands in order of first encounter
+    body.innerHTML = tabBar + `<p style="padding:24px;font-size:11px;color:var(--taupe);letter-spacing:0.06em">Loading…</p>`;
+
+    const rawProducts = await getLikedProductData('id,brand');
     const seen = new Set();
     const brandList = [];
-    likedProducts.forEach(p => {
+    rawProducts.forEach(p => {
       if (!seen.has(p.brand)) {
         seen.add(p.brand);
-        brandList.push({ key: p.brand, label: BRAND_LABELS[p.brand] || p.brand });
+        brandList.push({ key: p.brand, label: (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand });
       }
     });
+
     const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedBrandsPage()">Shop All Liked Brands →</button>`;
     const list = `<div class="likes-brand-list">${brandList.map(b=>`
       <div class="likes-brand-row" onclick="closeAllPanels();showBrandDetail('${escAttr(b.key)}')">
@@ -1836,18 +1853,27 @@ function openLikedProductsPage() {
     if (countEl) countEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
     document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
   };
-  if (_productsLoaded) { apply(); } else { setTimeout(apply, 1000); }
+  if (_productsLoaded) { apply(); } else { setTimeout(apply, 1200); }
 }
 
 // Open a shop page filtered to all products from liked brands
-function openLikedBrandsPage() {
+async function openLikedBrandsPage() {
   const likes = getLikes();
   if (!likes.length) { goShop('all'); return; }
-  const likedBrands = new Set(
-    likes.map(id => _allProducts.find(p => String(p.id) === String(id)))
-         .filter(Boolean)
-         .map(p => p.brand)
-  );
+
+  // Get brand keys — from cache or Supabase
+  let likedBrands;
+  if (_allProducts.length) {
+    likedBrands = new Set(
+      likes.map(id => _allProducts.find(p => String(p.id) === String(id)))
+           .filter(Boolean).map(p => p.brand)
+    );
+  } else {
+    const ids = likes.map(id => parseInt(id, 10)).filter(Boolean);
+    const { data } = await sb.from('products').select('brand').in('id', ids);
+    likedBrands = new Set((data || []).map(p => p.brand));
+  }
+
   goShop('all');
   const apply = () => {
     const grid = document.getElementById('productGrid');
@@ -1865,7 +1891,7 @@ function openLikedBrandsPage() {
     document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
     renderLikeStates();
   };
-  if (_productsLoaded) { apply(); } else { setTimeout(apply, 1000); }
+  if (_productsLoaded) { apply(); } else { setTimeout(apply, 1200); }
 }
 
 
