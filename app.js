@@ -1474,12 +1474,22 @@ function clearAllFilters() { clearSidebarFilters(); }
 // ══════════════════════════════════════════
 let _flagged = new Set(); // local session cache
 
-function toggleFlag(e, btn) {
+// Generate or retrieve a persistent anonymous session ID
+function getSessionId() {
+  let sid = sessionStorage.getItem('susta_sid');
+  if (!sid) {
+    sid = 'anon_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem('susta_sid', sid);
+  }
+  return sid;
+}
+
+async function toggleFlag(e, btn) {
   e.stopPropagation();
   const card = btn.closest('.product-card');
   const id = card.dataset.id;
   if (_flagged.has(id)) {
-    // un-flag
+    // un-flag (just remove from local UI — row stays in DB for your records)
     _flagged.delete(id);
     btn.classList.remove('flagged');
     btn.title = 'Flag as unavailable';
@@ -1488,9 +1498,14 @@ function toggleFlag(e, btn) {
     _flagged.add(id);
     btn.classList.add('flagged');
     btn.title = 'Flagged — thank you!';
-    // Save flag to Supabase (fire and forget)
-    sb.from('product_flags').upsert({ product_id: parseInt(id), flagged_at: new Date().toISOString() })
-      .catch(() => {});
+    // Save to Supabase — insert a new row (anyone can flag, no login needed)
+    try {
+      await sb.from('product_flags').insert({
+        product_id: parseInt(id),
+        session_id: getSessionId(),
+        flagged_at: new Date().toISOString()
+      });
+    } catch(err) {}
   }
 }
 
@@ -1728,30 +1743,119 @@ async function doResetPassword() {
   }
 }
 
-function renderLikesPanel() {
+function renderLikesPanel(activeTab) {
+  const tab = activeTab || 'products';
   const body = document.getElementById('likesPanelBody');
   if (!currentUser) {
     body.innerHTML = `<div class="likes-prompt"><p>Sign in to see your likes</p><button onclick="closeAllPanels();openProfilePanel()">Sign In / Create Account</button></div>`;
     return;
   }
   const likes = getLikes();
-  if (!likes.length) {
-    body.innerHTML = `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
-    return;
+
+  // Tab bar always visible
+  const tabBar = `
+    <div class="likes-panel-tabs">
+      <button class="likes-panel-tab ${tab==='products'?'active':''}" onclick="renderLikesPanel('products')">Products</button>
+      <button class="likes-panel-tab ${tab==='brands'?'active':''}" onclick="renderLikesPanel('brands')">Brands</button>
+    </div>`;
+
+  if (tab === 'products') {
+    if (!likes.length) {
+      body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
+      return;
+    }
+    // Get liked cards sorted by most recently liked (likes array is ordered chronologically, newest at end)
+    const likedCards = [...likes].reverse().map(id => document.querySelector(`.product-card[data-id="${id}"]`)).filter(Boolean);
+    const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedProductsPage()">Shop All Liked (${likes.length}) →</button>`;
+    const grid = `<div class="liked-grid">${likedCards.map(c=>`
+      <div class="liked-card">
+        <div class="liked-card-img"><img src="${c.dataset.img}" alt="${c.dataset.name}" onerror="this.style.display='none'"></div>
+        <button class="liked-card-remove" onclick="removeLike('${c.dataset.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <div class="liked-card-info">
+          <p class="liked-card-brand">${c.dataset.brandlabel}</p>
+          <p class="liked-card-name">${c.dataset.name}</p>
+          <p class="liked-card-material">${c.dataset.material}</p>
+          <p class="liked-card-price">${c.dataset.price}</p>
+        </div>
+        <a href="${c.dataset.url}" target="_blank" class="liked-card-shop">Shop now →</a>
+      </div>`).join('')}</div>`;
+    body.innerHTML = tabBar + shopAllBtn + grid;
+
+  } else {
+    // Brands tab — unique brands from liked products
+    if (!likes.length) {
+      body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Like some products to see your favourite brands here</span></div>`;
+      return;
+    }
+    const likedCards = [...likes].map(id => document.querySelector(`.product-card[data-id="${id}"]`)).filter(Boolean);
+    // Unique brands preserving order of first encounter
+    const seen = new Set();
+    const brandList = [];
+    likedCards.forEach(c => {
+      if (!seen.has(c.dataset.brand)) {
+        seen.add(c.dataset.brand);
+        brandList.push({ key: c.dataset.brand, label: c.dataset.brandlabel });
+      }
+    });
+    const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedBrandsPage()">Shop All Liked Brands →</button>`;
+    const list = `<div class="likes-brand-list">${brandList.map(b=>`
+      <div class="likes-brand-row" onclick="closeAllPanels();showBrandDetail('${b.key}')">
+        <span class="likes-brand-name">${b.label}</span>
+        <span class="likes-brand-arrow">→</span>
+      </div>`).join('')}</div>`;
+    body.innerHTML = tabBar + shopAllBtn + list;
   }
-  const cards = Array.from(document.querySelectorAll('.product-card')).filter(c => likes.includes(c.dataset.id));
-  body.innerHTML = `<div class="liked-grid">${cards.map(c=>`
-    <div class="liked-card">
-      <div class="liked-card-img"><img src="${c.dataset.img}" alt="${c.dataset.name}" onerror="this.style.display='none'"></div>
-      <button class="liked-card-remove" onclick="removeLike('${c.dataset.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-      <div class="liked-card-info">
-        <p class="liked-card-brand">${c.dataset.brandlabel}</p>
-        <p class="liked-card-name">${c.dataset.name}</p>
-        <p class="liked-card-material">${c.dataset.material}</p>
-        <p class="liked-card-price">${c.dataset.price}</p>
-      </div>
-      <a href="${c.dataset.url}" target="_blank" class="liked-card-shop">Shop now →</a>
-    </div>`).join('')}</div>`;
+}
+
+// Open a "Liked Products" page — filters shop to only liked items
+function openLikedProductsPage() {
+  // Make sure shop is loaded first
+  goShop('all');
+  // Then filter to liked items only
+  setTimeout(() => {
+    const likes = getLikes();
+    const grid = document.getElementById('productGrid');
+    if (!grid) return;
+    const cards = grid.querySelectorAll('.product-card');
+    let visible = 0;
+    cards.forEach(c => {
+      const show = likes.includes(c.dataset.id);
+      c.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('shopTitle').textContent = 'My Liked Pieces';
+    document.getElementById('shopSub').textContent = '';
+    const countEl = document.getElementById('shopCount');
+    if (countEl) countEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
+    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+  }, _productsLoaded ? 0 : 900);
+}
+
+// Open a shop page filtered to all liked brands
+function openLikedBrandsPage() {
+  const likes = getLikes();
+  if (!likes.length) { goShop('all'); return; }
+  const likedCards = likes.map(id => document.querySelector(`.product-card[data-id="${id}"]`)).filter(Boolean);
+  const likedBrands = new Set(likedCards.map(c => c.dataset.brand));
+
+  goShop('all');
+  setTimeout(() => {
+    const grid = document.getElementById('productGrid');
+    if (!grid) return;
+    const cards = grid.querySelectorAll('.product-card');
+    let visible = 0;
+    cards.forEach(c => {
+      const show = likedBrands.has(c.dataset.brand);
+      c.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    document.getElementById('shopTitle').textContent = 'My Liked Brands';
+    document.getElementById('shopSub').textContent = '';
+    const countEl = document.getElementById('shopCount');
+    if (countEl) countEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
+    document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
+    renderLikeStates();
+  }, _productsLoaded ? 0 : 900);
 }
 
 

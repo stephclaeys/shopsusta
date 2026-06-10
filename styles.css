@@ -396,7 +396,7 @@ nav {
 .shop-main { padding: 40px 40px 64px; background: var(--warm-white); }
 .shop-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
 .shop-title { font-family: var(--serif); font-size: 30px; font-weight: 500; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; }
-.shop-sub { font-size: 13px; color: var(--taupe); margin-bottom: 36px; }
+.shop-sub { display: none; }
 
 .product-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
 .product-card { background: var(--warm-white); position: relative; overflow: hidden; }
@@ -440,7 +440,7 @@ nav {
 .like-btn.liked svg { stroke: #C1605A; fill: #C1605A; }
 .like-btn:active { transform: scale(0.88); }
 .product-info { padding: 14px 14px 20px; }
-.product-brand-lbl { font-size: 11px; color: var(--accent); margin-bottom: 4px; font-family: var(--script); font-weight: 400; letter-spacing: 0.01em; text-transform: none; }
+.product-brand-lbl { font-size: 10px; color: var(--accent); margin-bottom: 4px; font-family: var(--sans); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
 .product-name { font-family: var(--serif); font-size: 11px; font-weight: 500; line-height: 1.3; margin-bottom: 3px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dark); }
 .product-material { font-size: 10px; color: var(--taupe); font-style: italic; margin-bottom: 8px; }
 .product-price { font-size: 13px; color: var(--mid); font-weight: 400; }
@@ -587,7 +587,7 @@ nav {
 .liked-card-remove { position: absolute; top: 7px; right: 7px; width: 22px; height: 22px; background: rgba(250,250,248,0.92); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
 .liked-card-remove svg { width: 9px; height: 9px; stroke: var(--taupe); fill: none; stroke-width: 2; }
 .liked-card-info { padding: 9px 11px 5px; }
-.liked-card-brand { font-size: 11px; color: var(--accent); margin-bottom: 4px; font-family: var(--script); font-weight: 400; letter-spacing: 0.01em; text-transform: none; }
+.liked-card-brand { font-size: 9px; color: var(--accent); margin-bottom: 4px; font-family: var(--sans); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
 .liked-card-name { font-family: var(--serif); font-size: 11px; font-weight: 500; line-height: 1.3; margin-bottom: 3px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dark); }
 .liked-card-price { font-size: 13px; color: var(--mid); font-weight: 400; }
 .liked-card-material { font-size: 10px; color: var(--taupe); font-style: italic; margin-bottom: 8px; }
@@ -597,6 +597,20 @@ nav {
 .likes-prompt p { font-family: var(--serif); font-size: 19px; font-style: italic; color: var(--taupe); margin-bottom: 18px; font-weight: 300; }
 .likes-prompt button { padding: 12px 28px; background: var(--accent); color: #fff; border: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; transition: background 0.2s; }
 .likes-prompt button:hover { background: var(--dark); }
+
+/* likes panel — products/brands tabs */
+.likes-panel-tabs { display: flex; border-bottom: 0.5px solid var(--stone); margin-bottom: 16px; }
+.likes-panel-tab { flex: 1; padding: 10px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--taupe); cursor: pointer; background: none; border: none; font-family: var(--sans); font-weight: 400; border-bottom: 1.5px solid transparent; margin-bottom: -0.5px; transition: all 0.2s; }
+.likes-panel-tab.active { color: var(--dark); border-bottom-color: var(--dark); }
+.likes-shop-all-btn { display: block; width: 100%; padding: 11px 14px; margin-bottom: 16px; background: none; border: 0.5px solid var(--stone); font-family: var(--sans); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mid); cursor: pointer; text-align: left; transition: all 0.2s; }
+.likes-shop-all-btn:hover { background: var(--dark); color: #fff; border-color: var(--dark); }
+.likes-brand-list { display: flex; flex-direction: column; gap: 0; }
+.likes-brand-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 0.5px solid #EDE8E2; cursor: pointer; transition: color 0.15s; }
+.likes-brand-row:first-child { border-top: 0.5px solid #EDE8E2; }
+.likes-brand-row:hover .likes-brand-name { color: var(--accent); }
+.likes-brand-name { font-size: 13px; color: var(--mid); font-weight: 300; }
+.likes-brand-arrow { font-size: 14px; color: var(--stone); transition: color 0.15s, transform 0.15s; }
+.likes-brand-row:hover .likes-brand-arrow { color: var(--accent); transform: translateX(3px); }
 
 /* ════════════════════════════════════════════════
    FOOTER
@@ -662,7 +676,7 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
 /* ════ BRAND DETAIL ════ */
 .brand-detail { display: none; padding: 0 0 80px; }
 .brand-detail.active { display: block; }
-.brand-detail-hero { background: var(--cream); padding: 56px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+.brand-detail-hero { background: var(--warm-white); padding: 56px 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
 .brand-detail-back { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--taupe); cursor: pointer; margin-bottom: 32px; background: none; border: none; font-family: var(--sans); transition: color 0.2s; }
 .brand-detail-back:hover { color: var(--dark); }
 .brand-detail-logo { display: none; }
@@ -702,7 +716,7 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
   overflow-y: auto;
   background: var(--warm-white);
 }
-.brand-shop-main { padding: 32px 40px 64px; background: var(--cream); }
+.brand-shop-main { padding: 32px 40px 64px; background: var(--warm-white); }
 .brand-shop-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 16px; margin-bottom: 28px;
@@ -891,7 +905,7 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
   .sidebar-drawer-close svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
   .sidebar-drawer-close:hover { color: var(--dark); }
   .shop-main { padding: 24px 20px 64px; }
-  .product-grid { grid-template-columns: repeat(3, 1fr); gap: 2px; }
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 2px; }
   .shop-title { font-size: 22px; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; }
   .product-name { font-size: 10px; }
   .product-info { padding: 10px 10px 16px; }
@@ -968,7 +982,7 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
   .slide.slide-edit .slide-cta { font-size: 8px; padding: 7px 14px; }
   .cat-trio { grid-template-columns: 1fr; }
   .cat-trio .cat-card:last-child { display: block; }
-  .product-grid { grid-template-columns: repeat(3, 1fr); }
+  .product-grid { grid-template-columns: repeat(2, 1fr); }
   .liked-grid { grid-template-columns: 1fr; }
   .slide-content { padding: 24px 20px 40px; }
   .slide-body { display: none; }
@@ -1007,7 +1021,7 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
 .search-result-item:last-child { border-bottom: none; }
 .search-result-img { width: 44px; height: 56px; object-fit: cover; flex-shrink: 0; background: var(--cream); }
 .search-result-info { flex: 1; min-width: 0; }
-.search-result-brand { font-size: 14px; font-family: var(--script); font-weight: 400; color: var(--taupe); margin-bottom: 3px; letter-spacing: 0.01em; }
+.search-result-brand { font-size: 10px; font-family: var(--sans); font-weight: 500; color: var(--accent); margin-bottom: 3px; letter-spacing: 0.1em; text-transform: uppercase; }
 .search-result-name { font-family: var(--serif); font-size: 14px; font-weight: 300; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .search-result-price { font-size: 11px; color: var(--mid); margin-top: 2px; }
 .search-no-results { padding: 24px 20px; font-size: 12px; color: var(--taupe); font-style: italic; }
@@ -1208,10 +1222,10 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
 .flag-btn.flagged svg { stroke: #B5914A; fill: #B5914A; }
 .flag-btn:active { transform: scale(0.88); }
 .flag-notice {
-  font-size: 10px; color: var(--taupe); margin-bottom: 16px; line-height: 1.7;
+  font-size: 10px; color: #999; margin-bottom: 16px; line-height: 1.7;
   padding: 10px 14px; border-left: 2px solid var(--stone); background: var(--warm-white);
 }
-.flag-notice span { color: #B5914A; }
+.flag-notice span { color: #999; }
 
 @media (max-width: 480px) {
   .sort-bar { gap: 8px; }
