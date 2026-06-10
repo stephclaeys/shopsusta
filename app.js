@@ -1611,13 +1611,13 @@ async function toggleLike(e, btn) {
 }
 
 async function removeLike(id) {
-  _likes = _likes.filter(l => String(l) !== String(id));
-  // Update heart button if card happens to be in DOM
+  _likes = _likes.filter(l => l !== id);
   const btn = document.querySelector(`.product-card[data-id="${id}"] .like-btn`);
   if (btn) btn.classList.remove('liked');
   await sb.from('likes').delete().eq('user_id', currentUser.id).eq('product_id', parseInt(id, 10));
   updateLikesBadge();
-  renderLikesPanel(document.querySelector('.likes-panel-tab.active')?.textContent.toLowerCase() || 'products');
+  const activeTab = document.querySelector('.likes-panel-tab.active');
+  renderLikesPanel(activeTab ? activeTab.textContent.toLowerCase() : 'products');
   if (openPanel === 'profilePanel') renderProfilePanel();
 }
 
@@ -1646,7 +1646,7 @@ function closeAllPanels() {
 }
 function _openPanel(id) { closeAllPanels(); document.getElementById(id).classList.add('open'); document.getElementById('panelBackdrop').classList.add('open'); openPanel = id; }
 function openProfilePanel() { renderProfilePanel(); _openPanel('profilePanel'); }
-function openLikesPanel() { renderLikesPanel().then(() => _openPanel('likesPanel')); }
+function openLikesPanel() { renderLikesPanel(); _openPanel('likesPanel'); }
 
 function renderProfilePanel() {
   const body = document.getElementById('profilePanelBody');
@@ -1745,7 +1745,7 @@ async function doResetPassword() {
   }
 }
 
-async function renderLikesPanel(activeTab) {
+function renderLikesPanel(activeTab) {
   const tab = activeTab || 'products';
   const body = document.getElementById('likesPanelBody');
   if (!currentUser) {
@@ -1760,84 +1760,90 @@ async function renderLikesPanel(activeTab) {
       <button class="likes-panel-tab ${tab==='brands'?'active':''}" onclick="renderLikesPanel('brands')">Brands</button>
     </div>`;
 
-  // Helper: get liked product data — from cache if ready, else fetch direct from Supabase
-  async function getLikedProductData(fields) {
-    const ids = likes.map(id => parseInt(id, 10)).filter(Boolean);
-    if (!ids.length) return [];
-    if (_allProducts.length) {
-      return ids.map(id => _allProducts.find(p => p.id === id)).filter(Boolean);
-    }
-    const sel = fields || '*';
-    const { data } = await sb.from('products').select(sel).in('id', ids);
-    return data || [];
-  }
-
   if (tab === 'products') {
     if (!likes.length) {
       body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
       return;
     }
-    body.innerHTML = tabBar + `<p style="padding:24px;font-size:11px;color:var(--taupe);letter-spacing:0.06em">Loading…</p>`;
-
-    const rawProducts = await getLikedProductData('*');
-    // Re-order to match _likes order (newest liked first)
-    const likedProducts = [...likes].reverse()
-      .map(id => rawProducts.find(p => String(p.id) === String(id)))
-      .filter(Boolean);
-
-    if (!likedProducts.length) {
-      body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
-      return;
-    }
-
-    const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedProductsPage()">Shop All Liked (${likes.length}) →</button>`;
-    const grid = `<div class="liked-grid">${likedProducts.map(p => {
-      const brandLabel = (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand;
-      const displayPrice = formatPrice(p.price, p.brand);
-      return `
-        <div class="liked-card">
-          <div class="liked-card-img">${p.image_url ? `<img src="${escAttr(p.image_url)}" alt="${escAttr(p.name)}" onerror="this.style.display='none'">` : ''}</div>
-          <button class="liked-card-remove" onclick="removeLike('${p.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-          <div class="liked-card-info">
-            <p class="liked-card-brand">${brandLabel}</p>
-            <p class="liked-card-name">${p.name}</p>
-            <p class="liked-card-material">${p.material || ''}</p>
-            <p class="liked-card-price">${displayPrice}</p>
-          </div>
-          <a href="${escAttr(p.shop_url)}" target="_blank" class="liked-card-shop">Shop now →</a>
-        </div>`;
-    }).join('')}</div>`;
-    body.innerHTML = tabBar + shopAllBtn + grid;
+    // Show shell immediately, fill async
+    body.innerHTML = tabBar + `<p class="likes-loading" style="padding:24px;font-size:11px;color:var(--taupe);letter-spacing:0.06em">Loading…</p>`;
+    _fillLikedProducts(body, tabBar, likes);
 
   } else {
-    // Brands tab
     if (!likes.length) {
       body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Like some products to see your favourite brands here</span></div>`;
       return;
     }
-    body.innerHTML = tabBar + `<p style="padding:24px;font-size:11px;color:var(--taupe);letter-spacing:0.06em">Loading…</p>`;
-
-    const rawProducts = await getLikedProductData('id,brand');
-    const seen = new Set();
-    const brandList = [];
-    rawProducts.forEach(p => {
-      if (!seen.has(p.brand)) {
-        seen.add(p.brand);
-        brandList.push({ key: p.brand, label: (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand });
-      }
-    });
-
-    const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedBrandsPage()">Shop All Liked Brands →</button>`;
-    const list = `<div class="likes-brand-list">${brandList.map(b=>`
-      <div class="likes-brand-row" onclick="closeAllPanels();showBrandDetail('${escAttr(b.key)}')">
-        <span class="likes-brand-name">${b.label}</span>
-        <span class="likes-brand-arrow">→</span>
-      </div>`).join('')}</div>`;
-    body.innerHTML = tabBar + shopAllBtn + list;
+    body.innerHTML = tabBar + `<p class="likes-loading" style="padding:24px;font-size:11px;color:var(--taupe);letter-spacing:0.06em">Loading…</p>`;
+    _fillLikedBrands(body, tabBar, likes);
   }
 }
 
-// Open a shop page filtered to only liked product IDs
+async function _fillLikedProducts(body, tabBar, likes) {
+  // Use _allProducts if ready, else fetch from Supabase
+  let products;
+  if (_allProducts.length) {
+    products = likes.map(id => _allProducts.find(p => String(p.id) === String(id))).filter(Boolean);
+  } else {
+    const ids = likes.map(id => parseInt(id, 10)).filter(Boolean);
+    const { data } = await sb.from('products').select('*').in('id', ids);
+    products = data || [];
+  }
+  // Sort newest-liked first
+  const ordered = [...likes].reverse()
+    .map(id => products.find(p => String(p.id) === String(id)))
+    .filter(Boolean);
+
+  if (!ordered.length) {
+    body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
+    return;
+  }
+  const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedProductsPage()">Shop All Liked (${likes.length}) →</button>`;
+  const grid = `<div class="liked-grid">${ordered.map(p => {
+    const brandLabel = (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand;
+    const displayPrice = formatPrice(p.price, p.brand);
+    return `<div class="liked-card">
+      <div class="liked-card-img">${p.image_url ? `<img src="${escAttr(p.image_url)}" alt="${escAttr(p.name)}" onerror="this.style.display='none'">` : ''}</div>
+      <button class="liked-card-remove" onclick="removeLike('${p.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div class="liked-card-info">
+        <p class="liked-card-brand">${brandLabel}</p>
+        <p class="liked-card-name">${p.name}</p>
+        <p class="liked-card-material">${p.material || ''}</p>
+        <p class="liked-card-price">${displayPrice}</p>
+      </div>
+      <a href="${escAttr(p.shop_url)}" target="_blank" class="liked-card-shop">Shop now →</a>
+    </div>`;
+  }).join('')}</div>`;
+  body.innerHTML = tabBar + shopAllBtn + grid;
+}
+
+async function _fillLikedBrands(body, tabBar, likes) {
+  let products;
+  if (_allProducts.length) {
+    products = likes.map(id => _allProducts.find(p => String(p.id) === String(id))).filter(Boolean);
+  } else {
+    const ids = likes.map(id => parseInt(id, 10)).filter(Boolean);
+    const { data } = await sb.from('products').select('id,brand').in('id', ids);
+    products = data || [];
+  }
+  const seen = new Set();
+  const brandList = [];
+  products.forEach(p => {
+    if (!seen.has(p.brand)) {
+      seen.add(p.brand);
+      brandList.push({ key: p.brand, label: (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand });
+    }
+  });
+  const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedBrandsPage()">Shop All Liked Brands →</button>`;
+  const list = `<div class="likes-brand-list">${brandList.map(b => `
+    <div class="likes-brand-row" onclick="closeAllPanels();showBrandDetail('${escAttr(b.key)}')">
+      <span class="likes-brand-name">${b.label}</span>
+      <span class="likes-brand-arrow">→</span>
+    </div>`).join('')}</div>`;
+  body.innerHTML = tabBar + shopAllBtn + list;
+}
+
+// Open shop page filtered to only liked product IDs
 function openLikedProductsPage() {
   const likes = getLikes();
   goShop('all');
@@ -1859,24 +1865,14 @@ function openLikedProductsPage() {
   if (_productsLoaded) { apply(); } else { setTimeout(apply, 1200); }
 }
 
-// Open a shop page filtered to all products from liked brands
-async function openLikedBrandsPage() {
+// Open shop page filtered to all products from liked brands
+function openLikedBrandsPage() {
   const likes = getLikes();
   if (!likes.length) { goShop('all'); return; }
-
-  // Get brand keys — from cache or Supabase
-  let likedBrands;
-  if (_allProducts.length) {
-    likedBrands = new Set(
-      likes.map(id => _allProducts.find(p => String(p.id) === String(id)))
-           .filter(Boolean).map(p => p.brand)
-    );
-  } else {
-    const ids = likes.map(id => parseInt(id, 10)).filter(Boolean);
-    const { data } = await sb.from('products').select('brand').in('id', ids);
-    likedBrands = new Set((data || []).map(p => p.brand));
-  }
-
+  const likedBrands = new Set(
+    likes.map(id => _allProducts.find(p => String(p.id) === String(id)))
+         .filter(Boolean).map(p => p.brand)
+  );
   goShop('all');
   const apply = () => {
     const grid = document.getElementById('productGrid');
