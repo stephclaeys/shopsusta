@@ -308,6 +308,20 @@ input, textarea, select { font-family: var(--sans); }
             <option value="false">Hide</option>
           </select>
         </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Add to Edit</span>
+          <select class="bulk-select-input" id="bulkEdit">
+            <option value="">— no change —</option>
+            <!-- populated by JS when edits load -->
+          </select>
+        </div>
+        <div class="bulk-field">
+          <span class="bulk-field-label">Remove from Edit</span>
+          <select class="bulk-select-input" id="bulkEditRemove">
+            <option value="">— no change —</option>
+            <!-- populated by JS when edits load -->
+          </select>
+        </div>
         <button class="bulk-apply-btn" id="bulkApplyBtn" onclick="applyBulk()">Apply to selected</button>
         <span class="bulk-msg" id="bulkMsg"></span>
       </div>
@@ -317,7 +331,7 @@ input, textarea, select { font-family: var(--sans); }
     <div class="tab-panel" id="panel-edits">
       <div class="section-header">
         <p class="section-title">Edits</p>
-        <p class="section-sub">Toggle edits on/off. To add/remove products, open a product and use the Edits section in the drawer.</p>
+        <p class="section-sub">Toggle edits on/off. Add products in bulk via Select on the Products tab, or one at a time by opening a product drawer.</p>
       </div>
       <div class="edits-grid" id="editsGrid"><div class="loading">Loading edits…</div></div>
     </div>
@@ -534,17 +548,23 @@ function updateBulkBar() {
 async function applyBulk() {
   if (!_selectedIds.size) return;
   const updates = {};
-  const vis    = document.getElementById('bulkVisible').value;
-  const cat    = document.getElementById('bulkCat').value;
-  const style  = document.getElementById('bulkStyle').value;
-  const colour = document.getElementById('bulkColour').value;
-  const occ    = document.getElementById('bulkOccasion').value;
+  const vis          = document.getElementById('bulkVisible').value;
+  const cat          = document.getElementById('bulkCat').value;
+  const style        = document.getElementById('bulkStyle').value;
+  const colour       = document.getElementById('bulkColour').value;
+  const occ          = document.getElementById('bulkOccasion').value;
+  const editAdd      = document.getElementById('bulkEdit').value;
+  const editRemove   = document.getElementById('bulkEditRemove').value;
   if (vis !== '')    updates.visible  = vis === 'true';
   if (cat !== '')    updates.category = cat;
   if (style !== '')  updates.style    = style;
   if (colour !== '') updates.colour   = colour;
-  const addOccasion = occ !== '';
-  if (!Object.keys(updates).length && !addOccasion) { alert('Select at least one field to update.'); return; }
+  const addOccasion  = occ !== '';
+  const doEditAdd    = editAdd !== '';
+  const doEditRemove = editRemove !== '';
+  if (!Object.keys(updates).length && !addOccasion && !doEditAdd && !doEditRemove) {
+    alert('Select at least one field to update.'); return;
+  }
 
   const btn = document.getElementById('bulkApplyBtn');
   const msg = document.getElementById('bulkMsg');
@@ -554,20 +574,55 @@ async function applyBulk() {
   const ids = [..._selectedIds];
   let errors = 0;
 
-  if (addOccasion) {
-    for (const id of ids) {
-      const product = _allProducts.find(p => p.id === id);
-      const existing = (product?.occasion || '').split(',').map(s => s.trim()).filter(Boolean);
-      if (!existing.includes(occ)) existing.push(occ);
-      const perUpdate = { ...updates, occasion: existing.join(', ') };
-      const { error } = await sb.from('products').update(perUpdate).eq('id', id);
+  // ── Handle regular field updates ──
+  if (Object.keys(updates).length || addOccasion) {
+    if (addOccasion) {
+      for (const id of ids) {
+        const product = _allProducts.find(p => p.id === id);
+        const existing = (product?.occasion || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (!existing.includes(occ)) existing.push(occ);
+        const perUpdate = { ...updates, occasion: existing.join(', ') };
+        const { error } = await sb.from('products').update(perUpdate).eq('id', id);
+        if (error) errors++;
+        else { const idx = _allProducts.findIndex(p => p.id === id); if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...perUpdate }; }
+      }
+    } else {
+      const { error } = await sb.from('products').update(updates).in('id', ids);
       if (error) errors++;
-      else { const idx = _allProducts.findIndex(p => p.id === id); if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...perUpdate }; }
+      else ids.forEach(id => { const idx = _allProducts.findIndex(p => p.id === id); if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...updates }; });
     }
-  } else {
-    const { error } = await sb.from('products').update(updates).in('id', ids);
-    if (error) errors++;
-    else ids.forEach(id => { const idx = _allProducts.findIndex(p => p.id === id); if (idx !== -1) _allProducts[idx] = { ..._allProducts[idx], ...updates }; });
+  }
+
+  // ── Handle Add to Edit ──
+  if (doEditAdd) {
+    const editId = parseInt(editAdd, 10);
+    const edit = _allEdits.find(e => e.id === editId);
+    if (edit) {
+      // Only insert IDs not already in this edit
+      const toInsert = ids.filter(id => !edit._productIds.includes(id));
+      if (toInsert.length) {
+        const rows = toInsert.map(id => ({ edit_id: editId, product_id: id, sort_order: 0 }));
+        const { error } = await sb.from('edit_products').insert(rows);
+        if (error) errors++;
+        else { edit._productIds.push(...toInsert); }
+      }
+    }
+  }
+
+  // ── Handle Remove from Edit ──
+  if (doEditRemove) {
+    const editId = parseInt(editRemove, 10);
+    const edit = _allEdits.find(e => e.id === editId);
+    if (edit) {
+      const toRemove = ids.filter(id => edit._productIds.includes(id));
+      if (toRemove.length) {
+        const { error } = await sb.from('edit_products').delete()
+          .eq('edit_id', editId)
+          .in('product_id', toRemove);
+        if (error) errors++;
+        else { edit._productIds = edit._productIds.filter(id => !toRemove.includes(id)); }
+      }
+    }
   }
 
   if (errors) {
@@ -576,16 +631,20 @@ async function applyBulk() {
   } else {
     msg.textContent = '✓ Updated ' + ids.length + ' product' + (ids.length !== 1 ? 's' : '');
     msg.style.color = 'var(--green-light)';
-    ['bulkVisible','bulkCat','bulkStyle','bulkColour','bulkOccasion'].forEach(id => { document.getElementById(id).value = ''; });
+    ['bulkVisible','bulkCat','bulkStyle','bulkColour','bulkOccasion','bulkEdit','bulkEditRemove'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     setTimeout(() => { msg.classList.remove('visible'); deselectAll(); toggleBulkMode(); }, 2000);
   }
   msg.classList.add('visible');
   btn.disabled = false; btn.textContent = 'Apply to selected';
   filterProducts();
+  renderEditsGrid();
 }
 
 // ── PRODUCT DRAWER ──
-function openDrawer(id) {
+async function openDrawer(id) {
   const p = _allProducts.find(x => x.id === id);
   if (!p) return;
   _editingId = id;
@@ -597,6 +656,19 @@ function openDrawer(id) {
   document.getElementById('saveMsg').classList.remove('visible');
   document.getElementById('saveBtn').disabled = false;
   renderDrawerBody(p);
+  // Load flag count asynchronously and inject into drawer
+  try {
+    const { count } = await sb.from('product_flags')
+      .select('id', { count: 'exact', head: true })
+      .eq('product_id', id);
+    const flagEl = document.getElementById('drawerFlagCount');
+    if (flagEl) {
+      flagEl.textContent = count > 0
+        ? `⚑ Flagged ${count} time${count !== 1 ? 's' : ''} as unavailable`
+        : '⚑ No flags';
+      flagEl.style.color = count > 0 ? '#f08090' : 'var(--text3)';
+    }
+  } catch(e) {}
 }
 
 function closeDrawer() {
@@ -620,6 +692,7 @@ function renderDrawerBody(p) {
   document.getElementById('drawerBody').innerHTML = `
     ${p.image_url ? `<img class="drawer-img" src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}">` : `<div class="drawer-img-placeholder"><span>No image</span></div>`}
     <div class="field-group">
+      <p id="drawerFlagCount" style="font-size:11px;color:var(--text3);margin-bottom:4px;">⚑ Loading flags…</p>
       <span class="field-label">Visibility</span>
       <div class="toggle-row">
         <span class="toggle-label">Show on site</span>
@@ -729,6 +802,22 @@ async function loadEdits() {
   }
   _allEdits = edits;
   renderEditsGrid();
+  populateBulkEditDropdowns();
+}
+
+function populateBulkEditDropdowns() {
+  ['bulkEdit','bulkEditRemove'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    // Remove all options except the first placeholder
+    while (sel.options.length > 1) sel.remove(1);
+    _allEdits.forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.name;
+      sel.appendChild(opt);
+    });
+  });
 }
 
 function renderEditsGrid() {
@@ -744,7 +833,7 @@ function renderEditsGrid() {
       <p style="font-size:11px;color:var(--text3);margin-bottom:14px;">${e._productIds.length} products</p>
       <div class="edit-card-actions">
         <button class="edit-action-btn primary" onclick="toggleEditActive(${e.id},${e.active})">${e.active?'Take offline':'Go live'}</button>
-        <button class="edit-action-btn" onclick="alert('Open a product and use the Edits section in the drawer to add/remove it.')">Manage products</button>
+        <button class="edit-action-btn" onclick="alert('To add products: go to Products tab → Select → choose products → Apply to selected → Add to Edit. Or open any product drawer and use the Edits section.')">Manage products</button>
       </div>
     </div>`).join('');
 }
