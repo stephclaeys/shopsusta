@@ -1607,7 +1607,10 @@ async function toggleLike(e, btn) {
   }
   updateLikesBadge();
   if (openPanel === 'likesPanel') renderLikesPanel();
-  if (openPanel === 'profilePanel') renderProfilePanel();(id) {
+  if (openPanel === 'profilePanel') renderProfilePanel();
+}
+
+async function removeLike(id) {
   _likes = _likes.filter(l => String(l) !== String(id));
   // Update heart button if card happens to be in DOM
   const btn = document.querySelector(`.product-card[data-id="${id}"] .like-btn`);
