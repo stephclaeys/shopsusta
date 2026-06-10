@@ -3,7 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SUSTA</title>
+<title>SUSTA — Sustainable Women's Fashion</title>
+<meta name="description" content="Curated sustainable women's fashion from the world's best ethical brands. Discover pieces that look good and do good.">
+<meta property="og:title" content="SUSTA — Sustainable Women's Fashion">
+<meta property="og:description" content="Curated sustainable women's fashion from the world's best ethical brands. Discover pieces that look good and do good.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://shopsusta.com">
+<link rel="canonical" href="https://shopsusta.com">
+<script>
+  // Handle GitHub Pages clean URL redirect
+  (function() {
+    var redirect = sessionStorage.getItem('susta_redirect');
+    if (redirect && redirect !== '/') {
+      sessionStorage.removeItem('susta_redirect');
+      // Push the intended path into history so app.js restoreFromURL picks it up
+      window.history.replaceState(null, '', redirect);
+    }
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Caveat:wght@400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="styles.css">

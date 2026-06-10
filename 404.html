@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+  // GitHub Pages clean URL redirect
+  // Preserves the path and redirects to index.html
+  var path = window.location.pathname;
+  var search = window.location.search;
+  var hash = window.location.hash;
+  // Store the intended path in sessionStorage, then redirect to root
+  sessionStorage.setItem('susta_redirect', path + search + hash);
+  window.location.replace('/');
+</script>
+</head>
+<body></body>
+</html>

@@ -1,6 +1,58 @@
 // ══════════════════════════════════════════
 // PAGE ROUTING
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// PAGE META — updates <title> and meta description per page
+// ══════════════════════════════════════════
+const PAGE_META = {
+  home:    { title: 'SUSTA — Sustainable Women's Fashion', desc: 'Curated sustainable women's fashion from the world's best ethical brands. Discover pieces that look good and do good.' },
+  shop:    { title: 'Shop Sustainable Women's Clothing — SUSTA', desc: 'Browse curated sustainable women's clothing from ethical brands including Reformation, Christy Dawn, Spell, MUD Jeans and more.' },
+  brands:  { title: 'Sustainable Fashion Brands — SUSTA', desc: 'Discover our curated directory of sustainable and ethical women's fashion brands, each rated by Good On You.' },
+  about:   { title: 'About SUSTA — Sustainable Fashion Curated', desc: 'SUSTA curates sustainable women's fashion from brands that are genuinely doing things differently. Fashion that gives a damn.' },
+};
+const CAT_META = {
+  all:         { title: 'Shop All Sustainable Women's Clothing — SUSTA', desc: 'Browse all curated sustainable women's clothing and accessories from ethical brands.' },
+  dresses:     { title: 'Sustainable Dresses — SUSTA', desc: 'Shop sustainable and ethical women's dresses from Christy Dawn, Reformation, Spell and more.' },
+  tops:        { title: 'Sustainable Tops — SUSTA', desc: 'Curated sustainable women's tops from ethical brands using organic and natural materials.' },
+  denim:       { title: 'Sustainable Denim Jeans — SUSTA', desc: 'Shop ethical and circular denim from MUD Jeans, Nudie Jeans, Outland Denim and more.' },
+  bottoms:     { title: 'Sustainable Bottoms & Trousers — SUSTA', desc: 'Ethical women's trousers, skirts and bottoms from sustainable brands.' },
+  skirts:      { title: 'Sustainable Skirts — SUSTA', desc: 'Shop ethical women's skirts in natural and organic fabrics.' },
+  outerwear:   { title: 'Sustainable Outerwear — SUSTA', desc: 'Ethical and sustainable jackets and coats for women.' },
+  swim:        { title: 'Sustainable Swimwear — SUSTA', desc: 'Shop ethical and sustainable women's swimwear made with recycled and natural materials.' },
+  shoes:       { title: 'Sustainable Shoes & Footwear — SUSTA', desc: 'Ethical and vegan women's shoes from sustainable brands.' },
+  accessories: { title: 'Sustainable Accessories — SUSTA', desc: 'Curated ethical jewellery and accessories from sustainable brands.' },
+};
+
+function updatePageMeta(page, cat, brandLabel) {
+  let title, desc;
+  if (page === 'shop' && cat && CAT_META[cat]) {
+    title = CAT_META[cat].title;
+    desc  = CAT_META[cat].desc;
+  } else if (page === 'brand' && brandLabel) {
+    title = brandLabel + ' — Sustainable Fashion — SUSTA';
+    desc  = 'Shop ' + brandLabel + ' on SUSTA. Discover their sustainable and ethical clothing range.';
+  } else if (page === 'edit' && cat) {
+    title = cat + ' — SUSTA Edit';
+    desc  = 'A curated edit of sustainable women's fashion on SUSTA.';
+  } else if (PAGE_META[page]) {
+    title = PAGE_META[page].title;
+    desc  = PAGE_META[page].desc;
+  } else {
+    return;
+  }
+  document.title = title;
+  let metaDesc = document.querySelector('meta[name="description"]');
+  if (!metaDesc) { metaDesc = document.createElement('meta'); metaDesc.name = 'description'; document.head.appendChild(metaDesc); }
+  metaDesc.content = desc;
+  // Open Graph
+  let ogTitle = document.querySelector('meta[property="og:title"]');
+  if (!ogTitle) { ogTitle = document.createElement('meta'); ogTitle.setAttribute('property','og:title'); document.head.appendChild(ogTitle); }
+  ogTitle.content = title;
+  let ogDesc = document.querySelector('meta[property="og:description"]');
+  if (!ogDesc) { ogDesc = document.createElement('meta'); ogDesc.setAttribute('property','og:description'); document.head.appendChild(ogDesc); }
+  ogDesc.content = desc;
+}
+
 function showPage(id) {
   if (typeof closeMega === 'function') closeMega();
   if (typeof closeBrandsDropdown === 'function') closeBrandsDropdown();
@@ -8,6 +60,10 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   window.scrollTo(0, 0);
+  const urlMap = { home: '/', about: '/about', brands: '/brands', shop: '/shop' };
+  const url = urlMap[id] || ('/' + id);
+  history.pushState({ page: id }, '', url);
+  updatePageMeta(id);
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (id === 'about') document.getElementById('navAbout').classList.add('active');
   if (id === 'brands') {
@@ -37,6 +93,8 @@ function goShop(cat) {
   const catMap = { pants:'bottoms', trousers:'bottoms' };
   const normCat = catMap[cat] || cat;
   shopSetCat(normCat);
+  history.pushState({ page: 'shop', cat: normCat }, '', '/shop/' + normCat);
+  updatePageMeta('shop', normCat);
   if (!_productsLoaded) initShopCount();
 }
 
@@ -727,6 +785,7 @@ function buildEditPages() {
 
 // ── Show an edit page and load its products ──
 function showEditPage(key) {
+  history.pushState({ page: 'edit', key }, '', '/edits/' + key);
   if (!document.getElementById('page-edit-' + key)) {
     const poll = setInterval(() => {
       if (document.getElementById('page-edit-' + key)) {
@@ -927,7 +986,8 @@ async function doSignOut() {
 async function _loadLikes() {
   if (!currentUser) { _likes = []; return; }
   const { data } = await sb.from('likes').select('product_id').eq('user_id', currentUser.id);
-  _likes = data ? data.map(r => String(r.product_id)) : [];
+  // Deduplicate in case of duplicate rows in DB
+  _likes = data ? [...new Set(data.map(r => String(r.product_id)))] : [];
 }
 
 function getLikes() { return _likes; }
@@ -1111,6 +1171,9 @@ function showBrandDetail(brandKey) {
   document.getElementById('page-brands').classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('navBrands').classList.add('active');
+  history.pushState({ page: 'brand', key: brandKey }, '', '/brands/' + brandKey);
+  const bLabel = (BRAND_REGISTRY[brandKey] && BRAND_REGISTRY[brandKey].label) || BRAND_LABELS[brandKey] || brandKey;
+  updatePageMeta('brand', brandKey, bLabel);
 
   // Hide list, show detail
   document.getElementById('brandsListView').style.display = 'none';
@@ -1599,7 +1662,7 @@ async function toggleLike(e, btn) {
   if (idx === -1) {
     _likes.push(id);
     btn.classList.add('liked');
-    await sb.from('likes').insert({ user_id: currentUser.id, product_id: numId });
+    await sb.from('likes').upsert({ user_id: currentUser.id, product_id: numId }, { onConflict: 'user_id,product_id', ignoreDuplicates: true });
   } else {
     _likes.splice(idx, 1);
     btn.classList.remove('liked');
@@ -2408,6 +2471,50 @@ function closeMobileEditSidebar(key) {
   initShopCount();
   initHomeDuo();
   await loadEdits();
+
+  // Restore page from clean URL on load/refresh
+  (function restoreFromURL() {
+    const path = window.location.pathname.replace(/\/+$/, '') || '/';
+    if (path === '/' || path === '/index.html') {
+      updatePageMeta('home');
+      return; // default home page already shown
+    }
+    if (path.startsWith('/shop/')) {
+      const cat = path.replace('/shop/', '') || 'all';
+      goShop(cat);
+    } else if (path === '/shop') {
+      goShop('all');
+    } else if (path.startsWith('/brands/')) {
+      const key = path.replace('/brands/', '');
+      if (key) showBrandDetail(key);
+      else showPage('brands');
+    } else if (path === '/brands') {
+      showPage('brands');
+    } else if (path.startsWith('/edits/')) {
+      const key = path.replace('/edits/', '');
+      if (key) showEditPage(key);
+    } else if (path === '/about') {
+      showPage('about');
+    }
+    // Also handle legacy hash URLs gracefully
+    const hash = window.location.hash.replace('#', '');
+    if (hash && path === '/') {
+      if (hash.startsWith('shop/')) goShop(hash.replace('shop/', ''));
+      else if (hash.startsWith('brand/')) showBrandDetail(hash.replace('brand/', ''));
+      else if (hash.startsWith('edit/')) showEditPage(hash.replace('edit/', ''));
+      else if (document.getElementById('page-' + hash)) showPage(hash);
+    }
+  })();
+
+  // Handle browser back/forward
+  window.addEventListener('popstate', (e) => {
+    const state = e.state;
+    if (!state) { showPage('home'); return; }
+    if (state.page === 'shop') goShop(state.cat || 'all');
+    else if (state.page === 'brand') showBrandDetail(state.key);
+    else if (state.page === 'edit') showEditPage(state.key);
+    else if (state.page) showPage(state.page);
+  });
 
   // Keep session in sync
   try {

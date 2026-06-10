@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Core pages -->
+  <url><loc>https://shopsusta.com/</loc><priority>1.0</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/about</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+
+  <!-- Shop categories -->
+  <url><loc>https://shopsusta.com/shop</loc><priority>0.9</priority><changefreq>daily</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/dresses</loc><priority>0.9</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/tops</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/denim</loc><priority>0.8</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/bottoms</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/skirts</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/outerwear</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/swim</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/shoes</loc><priority>0.7</priority><changefreq>weekly</changefreq></url>
+  <url><loc>https://shopsusta.com/shop/accessories</loc><priority>0.6</priority><changefreq>weekly</changefreq></url>
+
+  <!-- Brand pages -->
+  <url><loc>https://shopsusta.com/brands/afends</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/anothertomorrow</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/christydawn</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/mud</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/nudiejeans</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/omnes</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/outlanddenim</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/reformation</loc><priority>0.8</priority><changefreq>monthly</changefreq></url>
+  <url><loc>https://shopsusta.com/brands/spell</loc><priority>0.7</priority><changefreq>monthly</changefreq></url>
+
+</urlset>
