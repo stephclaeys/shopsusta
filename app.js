@@ -1611,11 +1611,13 @@ async function toggleLike(e, btn) {
 }
 
 async function removeLike(id) {
-  _likes = _likes.filter(l => l !== id);
+  _likes = _likes.filter(l => String(l) !== String(id));
+  // Update heart button if card happens to be in DOM
   const btn = document.querySelector(`.product-card[data-id="${id}"] .like-btn`);
   if (btn) btn.classList.remove('liked');
   await sb.from('likes').delete().eq('user_id', currentUser.id).eq('product_id', parseInt(id, 10));
-  updateLikesBadge(); renderLikesPanel();
+  updateLikesBadge();
+  renderLikesPanel(document.querySelector('.likes-panel-tab.active')?.textContent.toLowerCase() || 'products');
   if (openPanel === 'profilePanel') renderProfilePanel();
 }
 
@@ -1752,7 +1754,6 @@ function renderLikesPanel(activeTab) {
   }
   const likes = getLikes();
 
-  // Tab bar always visible
   const tabBar = `
     <div class="likes-panel-tabs">
       <button class="likes-panel-tab ${tab==='products'?'active':''}" onclick="renderLikesPanel('products')">Products</button>
@@ -1764,21 +1765,28 @@ function renderLikesPanel(activeTab) {
       body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Tap the heart on any piece to save it here</span></div>`;
       return;
     }
-    // Get liked cards sorted by most recently liked (likes array is ordered chronologically, newest at end)
-    const likedCards = [...likes].reverse().map(id => document.querySelector(`.product-card[data-id="${id}"]`)).filter(Boolean);
+    // Build from _allProducts data — works regardless of which page is active
+    const likedProducts = [...likes].reverse()
+      .map(id => _allProducts.find(p => String(p.id) === String(id)))
+      .filter(Boolean);
+
     const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedProductsPage()">Shop All Liked (${likes.length}) →</button>`;
-    const grid = `<div class="liked-grid">${likedCards.map(c=>`
-      <div class="liked-card">
-        <div class="liked-card-img"><img src="${c.dataset.img}" alt="${c.dataset.name}" onerror="this.style.display='none'"></div>
-        <button class="liked-card-remove" onclick="removeLike('${c.dataset.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        <div class="liked-card-info">
-          <p class="liked-card-brand">${c.dataset.brandlabel}</p>
-          <p class="liked-card-name">${c.dataset.name}</p>
-          <p class="liked-card-material">${c.dataset.material}</p>
-          <p class="liked-card-price">${c.dataset.price}</p>
-        </div>
-        <a href="${c.dataset.url}" target="_blank" class="liked-card-shop">Shop now →</a>
-      </div>`).join('')}</div>`;
+    const grid = `<div class="liked-grid">${likedProducts.map(p => {
+      const brandLabel = BRAND_LABELS[p.brand] || p.brand;
+      const displayPrice = formatPrice(p.price, p.brand);
+      return `
+        <div class="liked-card">
+          <div class="liked-card-img">${p.image_url ? `<img src="${escAttr(p.image_url)}" alt="${escAttr(p.name)}" onerror="this.style.display='none'">` : ''}</div>
+          <button class="liked-card-remove" onclick="removeLike('${p.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <div class="liked-card-info">
+            <p class="liked-card-brand">${brandLabel}</p>
+            <p class="liked-card-name">${p.name}</p>
+            <p class="liked-card-material">${p.material || ''}</p>
+            <p class="liked-card-price">${displayPrice}</p>
+          </div>
+          <a href="${escAttr(p.shop_url)}" target="_blank" class="liked-card-shop">Shop now →</a>
+        </div>`;
+    }).join('')}</div>`;
     body.innerHTML = tabBar + shopAllBtn + grid;
 
   } else {
@@ -1787,19 +1795,21 @@ function renderLikesPanel(activeTab) {
       body.innerHTML = tabBar + `<div class="likes-empty"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><p>Nothing liked yet</p><span>Like some products to see your favourite brands here</span></div>`;
       return;
     }
-    const likedCards = [...likes].map(id => document.querySelector(`.product-card[data-id="${id}"]`)).filter(Boolean);
-    // Unique brands preserving order of first encounter
+    const likedProducts = likes
+      .map(id => _allProducts.find(p => String(p.id) === String(id)))
+      .filter(Boolean);
+    // Unique brands in order of first encounter
     const seen = new Set();
     const brandList = [];
-    likedCards.forEach(c => {
-      if (!seen.has(c.dataset.brand)) {
-        seen.add(c.dataset.brand);
-        brandList.push({ key: c.dataset.brand, label: c.dataset.brandlabel });
+    likedProducts.forEach(p => {
+      if (!seen.has(p.brand)) {
+        seen.add(p.brand);
+        brandList.push({ key: p.brand, label: BRAND_LABELS[p.brand] || p.brand });
       }
     });
     const shopAllBtn = `<button class="likes-shop-all-btn" onclick="closeAllPanels();openLikedBrandsPage()">Shop All Liked Brands →</button>`;
     const list = `<div class="likes-brand-list">${brandList.map(b=>`
-      <div class="likes-brand-row" onclick="closeAllPanels();showBrandDetail('${b.key}')">
+      <div class="likes-brand-row" onclick="closeAllPanels();showBrandDetail('${escAttr(b.key)}')">
         <span class="likes-brand-name">${b.label}</span>
         <span class="likes-brand-arrow">→</span>
       </div>`).join('')}</div>`;
@@ -1807,39 +1817,39 @@ function renderLikesPanel(activeTab) {
   }
 }
 
-// Open a "Liked Products" page — filters shop to only liked items
+// Open a shop page filtered to only liked product IDs
 function openLikedProductsPage() {
-  // Make sure shop is loaded first
+  const likes = getLikes();
   goShop('all');
-  // Then filter to liked items only
-  setTimeout(() => {
-    const likes = getLikes();
+  const apply = () => {
     const grid = document.getElementById('productGrid');
     if (!grid) return;
     const cards = grid.querySelectorAll('.product-card');
     let visible = 0;
     cards.forEach(c => {
-      const show = likes.includes(c.dataset.id);
+      const show = likes.includes(String(c.dataset.id));
       c.style.display = show ? '' : 'none';
       if (show) visible++;
     });
     document.getElementById('shopTitle').textContent = 'My Liked Pieces';
-    document.getElementById('shopSub').textContent = '';
     const countEl = document.getElementById('shopCount');
     if (countEl) countEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
     document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
-  }, _productsLoaded ? 0 : 900);
+  };
+  if (_productsLoaded) { apply(); } else { setTimeout(apply, 1000); }
 }
 
-// Open a shop page filtered to all liked brands
+// Open a shop page filtered to all products from liked brands
 function openLikedBrandsPage() {
   const likes = getLikes();
   if (!likes.length) { goShop('all'); return; }
-  const likedCards = likes.map(id => document.querySelector(`.product-card[data-id="${id}"]`)).filter(Boolean);
-  const likedBrands = new Set(likedCards.map(c => c.dataset.brand));
-
+  const likedBrands = new Set(
+    likes.map(id => _allProducts.find(p => String(p.id) === String(id)))
+         .filter(Boolean)
+         .map(p => p.brand)
+  );
   goShop('all');
-  setTimeout(() => {
+  const apply = () => {
     const grid = document.getElementById('productGrid');
     if (!grid) return;
     const cards = grid.querySelectorAll('.product-card');
@@ -1850,12 +1860,12 @@ function openLikedBrandsPage() {
       if (show) visible++;
     });
     document.getElementById('shopTitle').textContent = 'My Liked Brands';
-    document.getElementById('shopSub').textContent = '';
     const countEl = document.getElementById('shopCount');
     if (countEl) countEl.textContent = visible + ' piece' + (visible !== 1 ? 's' : '');
     document.getElementById('noResults').style.display = visible === 0 ? 'block' : 'none';
     renderLikeStates();
-  }, _productsLoaded ? 0 : 900);
+  };
+  if (_productsLoaded) { apply(); } else { setTimeout(apply, 1000); }
 }
 
 
