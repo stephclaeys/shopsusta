@@ -334,6 +334,11 @@ function escAttr(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// Escapes a string for safe use inside a single-quoted JS string in an inline handler.
+function escJs(s) {
+  return String(s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+
 function renderCard(p) {
   const brandLabel = (BRAND_REGISTRY[p.brand] && BRAND_REGISTRY[p.brand].label) || BRAND_LABELS[p.brand] || p.brand;
   const tagClass = p.tag_type === 'eco' ? 'eco' : 'standard';
@@ -547,6 +552,54 @@ function buildSidebarEdits() {
   section.style.display = '';
 }
 
+// ── Occasions (dynamic, from the `occasions` table) ──
+async function loadOccasions() {
+  const { data, error } = await sb
+    .from('occasions')
+    .select('*')
+    .eq('visible', true)
+    .order('sort_order');
+  if (error || !data) return;
+  _occasions = data;
+  SIDEBAR_OCCASIONS = data.map(o => o.name);
+  buildSidebarOccasions();
+  buildMegaOccasions();
+}
+
+function buildSidebarOccasions() {
+  const list = document.getElementById('sidebarOccList');
+  if (!list) return;
+  list.innerHTML = SIDEBAR_OCCASIONS.map(o =>
+    `<label class="sidebar-check"><input type="checkbox" value="${escAttr(o)}" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>${escAttr(o)}</span></label>`
+  ).join('');
+}
+
+function buildMegaOccasions() {
+  const col = document.getElementById('megaOccasionsList');
+  if (!col) return;
+  col.innerHTML = SIDEBAR_OCCASIONS.map(o =>
+    `<span class="mega-link" onclick="goShopOccasion('${escJs(o)}')">${escAttr(o)}</span>`
+  ).join('');
+}
+
+function goShopOccasion(name) {
+  if (typeof closeMega === 'function') closeMega();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-shop').classList.add('active');
+  window.scrollTo(0, 0);
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  shopSetCat('all');
+  // apply just this occasion
+  _sidebarOccasions.clear();
+  _sidebarOccasions.add(name);
+  document.querySelectorAll('#sidebarOccList input').forEach(i => { i.checked = (i.value === name); });
+  history.pushState({ page: 'shop', cat: 'all' }, '', '/shop/all');
+  updatePageMeta('shop', 'all');
+  updateSidebarTags();
+  runCombinedFilter();
+  if (!_productsLoaded) initShopCount();
+}
+
 // ── Home slider ───────────────────────────
 function buildHomeSlider() {
   const slider   = document.getElementById('heroSlider');
@@ -619,9 +672,9 @@ function buildEditPages() {
       ? `<video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"><source src="${edit.hero_video_url}" type="video/mp4"></video>`
       : `<img src="${edit.hero_image_url || ''}" style="width:100%;height:100%;object-fit:cover;" alt="${edit.name}">`;
 
-    const occasions = ['Weekend Wear','Formal','Beach Ready','Office Attire','Night Out','Off-Duty'];
+    const occasions = SIDEBAR_OCCASIONS.length ? SIDEBAR_OCCASIONS : ['Weekend Wear','Formal','Beach Ready','Office Attire','Night Out','Off-Duty'];
     const occHtml = occasions.map(o =>
-      `<label class="sidebar-check"><input type="checkbox" class="edit-occ-${k}" value="${o}" onchange="runEditFilter('${k}')"><span class="s-check-box"></span><span>${o}</span></label>`
+      `<label class="sidebar-check"><input type="checkbox" class="edit-occ-${k}" value="${escAttr(o)}" onchange="runEditFilter('${k}')"><span class="s-check-box"></span><span>${escAttr(o)}</span></label>`
     ).join('');
 
     // Build list of other edits for sidebar nav
@@ -2116,7 +2169,8 @@ function onStyleChange(style, input) {
 // SIDEBAR FILTER STATE + FUNCTIONS
 // ══════════════════════════════════════════
 const PRICE_MAX = 1000;
-const SIDEBAR_OCCASIONS = ['Weekend Wear','Formal','Beach Ready','Office Attire','Night Out','Off-Duty'];
+let SIDEBAR_OCCASIONS = []; // populated from the occasions table by loadOccasions()
+let _occasions = [];        // full visible occasion rows
 const SIDEBAR_COLOURS = [
   { key:'black',  label:'Black',  hex:'#1a1a1a' },
   { key:'white',  label:'White',  hex:'#ffffff' },
@@ -2506,6 +2560,7 @@ function closeMobileEditSidebar(key) {
   updatePriceFill();
   initShopCount();
   initHomeDuo();
+  await loadOccasions();
   await loadEdits();
 
   // Restore page from clean URL on load/refresh

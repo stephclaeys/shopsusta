@@ -49,6 +49,12 @@
     <span class="mega-link" onclick="goShop('shoes')">Shoes</span>
     <span class="mega-link" onclick="goShop('accessories')">Accessories</span>
   </div>
+  <div class="mega-col">
+    <p class="mega-col-title">Occasions</p>
+    <div id="megaOccasionsList">
+      <!-- populated dynamically by buildMegaOccasions() in app.js -->
+    </div>
+  </div>
   <div class="mega-col mega-col-edits">
     <p class="mega-col-title">Edits</p>
     <div id="megaEditsList">
@@ -349,6 +355,9 @@
     </div>
     <div class="cat-tab" id="cattab-shoes" onclick="shopSetCat('shoes')">
       <span class="cat-tab-label">Shoes</span>
+      <div class="cat-tab-dropdown">
+        <a onclick="shopSetCatSub('shoes','heels')">Heels</a>
+      </div>
     </div>
     <div class="cat-tab" id="cattab-accessories" onclick="shopSetCat('accessories')">
       <span class="cat-tab-label">Accessories</span>
@@ -406,13 +415,8 @@
           <svg class="filter-section-arrow" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
         </div>
         <div class="filter-section-body" style="max-height:300px">
-          <div class="sidebar-check-list">
-            <label class="sidebar-check"><input type="checkbox" value="Weekend Wear" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>Weekend Wear</span></label>
-            <label class="sidebar-check"><input type="checkbox" value="Formal" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>Formal</span></label>
-            <label class="sidebar-check"><input type="checkbox" value="Beach Ready" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>Beach Ready</span></label>
-            <label class="sidebar-check"><input type="checkbox" value="Office Attire" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>Office Attire</span></label>
-            <label class="sidebar-check"><input type="checkbox" value="Night Out" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>Night Out</span></label>
-            <label class="sidebar-check"><input type="checkbox" value="Off-Duty" onchange="onSidebarFilterChange()"><span class="s-check-box"></span><span>Off-Duty</span></label>
+          <div class="sidebar-check-list" id="sidebarOccList">
+            <!-- populated dynamically by buildSidebarOccasions() in app.js -->
           </div>
         </div>
       </div>
