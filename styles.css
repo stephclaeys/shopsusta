@@ -568,10 +568,6 @@ nav {
 .profile-avatar-filled { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; color: white; font-weight: 500; flex-shrink: 0; }
 .profile-user-info h3 { font-family: var(--serif); font-size: 19px; font-weight: 500; }
 .profile-user-info p { font-size: 11px; color: var(--taupe); }
-.profile-stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
-.profile-stat { background: var(--cream); padding: 16px; }
-.profile-stat-num { font-family: var(--serif); font-size: 26px; font-weight: 300; display: block; }
-.profile-stat-label { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--taupe); margin-top: 3px; display: block; }
 .profile-view-likes { width: 100%; padding: 13px; background: var(--accent); color: #fff; border: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; font-weight: 400; transition: background 0.2s; margin-bottom: 8px; }
 .profile-view-likes:hover { background: var(--dark); }
 .profile-sign-out { width: 100%; padding: 11px; border: 0.5px solid var(--stone); background: none; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--taupe); cursor: pointer; transition: all 0.2s; }
