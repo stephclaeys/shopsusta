@@ -522,6 +522,8 @@ nav {
 ════════════════════════════════════════════════ */
 .panel-backdrop { position: fixed; inset: 0; background: rgba(28,25,22,0.35); z-index: 600; display: none; }
 .panel-backdrop.open { display: block; }
+/* Profile + Likes panels: use a neutral grey for subtext/tab labels instead of the brown --taupe */
+#profilePanel, #likesPanel { --taupe: #8a8886; }
 .side-panel {
   position: fixed; top: 0; right: -520px; width: 440px; max-width: 96vw;
   height: 100vh; background: var(--warm-white); z-index: 700;

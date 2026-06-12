@@ -231,7 +231,7 @@ function sidebarFilter(cat, el) {
     } else if (isSubcat) {
       // Primary: match parent category AND subcategory tag from DB
       const catMatch = card.dataset.cat === parentCat;
-      const subcatMatch = card.dataset.subcat === subFilter;
+      const subcatMatch = (card.dataset.subcat || '').toLowerCase() === subFilter;
       // Fallback: if subcat field is empty, try name/material keyword matching
       const subcatEmpty = !card.dataset.subcat;
       let keywordMatch = false;
@@ -1840,10 +1840,6 @@ function renderProfilePanel() {
         <div class="profile-user-row">
           <div class="profile-user-info"><h3>${currentUser.name}</h3><p>${currentUser.email}</p></div>
         </div>
-        <div class="profile-stat-row">
-          <div class="profile-stat"><span class="profile-stat-num">${likes.length}</span><span class="profile-stat-label">Liked pieces</span></div>
-          <div class="profile-stat"><span class="profile-stat-num">4</span><span class="profile-stat-label">Brands</span></div>
-        </div>
         ${likes.length ? `<button class="profile-view-likes" onclick="closeAllPanels();openLikesPanel()">View liked pieces</button>` : `<p style="font-size:12px;color:var(--taupe);margin-bottom:20px;line-height:1.8">No liked pieces yet — tap ♡ on any item to save it.</p>`}
         <button class="profile-sign-out" onclick="doSignOut()">Sign Out</button>
       </div>`;
@@ -2348,7 +2344,7 @@ function runCombinedFilter() {
     // Subcategory
     if (show && _activeSub) {
       const catMatch = card.dataset.cat === _activeCat || (_activeCat === 'bottoms' && (card.dataset.cat === 'bottoms' || card.dataset.cat === 'trousers'));
-      const subcatMatch = card.dataset.subcat === _activeSub;
+      const subcatMatch = (card.dataset.subcat || '').toLowerCase() === _activeSub;
       const subcatEmpty = !card.dataset.subcat;
       let kwMatch = false;
       if (subcatEmpty) {
