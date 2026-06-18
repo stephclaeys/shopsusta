@@ -190,15 +190,17 @@
 ═══════════════════════════════════════ -->
 <div class="page active" id="page-home">
 
-  <!-- Tagline Banner -->
-  <div class="home-tagline-banner">
-    <span class="home-tagline-text"><span class="tagline-line1">sustainably made,</span><span class="tagline-line2"> carefully curated</span></span>
+  <!-- Hero Slider — populated dynamically from Supabase edits table -->
+  <div class="hero-slider" id="heroSlider">
+    <!-- slides injected by buildHomeSlider() in app.js -->
+    <!-- dots injected inside slider so they position correctly -->
+    <div class="slider-controls" id="sliderDots"></div>
   </div>
 
-  <!-- Three-col: Just In / Edits / New Brand Arrivals -->
-  <div class="home-trio-section" id="homeDuoSection">
+  <!-- Just In / New Brand Arrivals -->
+  <div class="home-duo-section" id="homeDuoSection">
     <!-- Left: Just In -->
-    <div class="home-trio-panel">
+    <div class="home-duo-panel">
       <div class="home-duo-header">
         <span class="home-duo-eyebrow">Just In</span>
         <span class="home-duo-shop-link" onclick="goShopNewest()">Shop Now</span>
@@ -208,22 +210,10 @@
           <div class="home-duo-placeholder"></div>
         </div>
       </div>
-    </div>
 
-    <!-- Centre: Edits -->
-    <div class="home-trio-panel">
-      <div class="home-duo-header">
-        <span class="home-duo-eyebrow">Edits</span>
-        <span class="home-duo-shop-link" onclick="goShop('all')">Browse All</span>
-      </div>
-      <div class="home-edits-stack" id="homeEditsPanels">
-        <!-- injected by buildHomeEditsPanels() -->
-        <div class="home-duo-placeholder" style="aspect-ratio:4/5;"></div>
-      </div>
     </div>
-
     <!-- Right: New Brand Arrivals -->
-    <div class="home-trio-panel">
+    <div class="home-duo-panel">
       <div class="home-duo-header">
         <span class="home-duo-eyebrow">New Brand Arrivals</span>
         <span class="home-duo-shop-link" onclick="goShopNewBrand()">Shop Now</span>
@@ -233,6 +223,7 @@
           <div class="home-duo-placeholder"></div>
         </div>
       </div>
+
     </div>
   </div>
 
@@ -795,5 +786,29 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/app.js"></script>
+
+<!-- ═══════════════════════════════════════
+     NEWSLETTER POPUP
+═══════════════════════════════════════ -->
+<div class="nl-backdrop" id="nlBackdrop" onclick="closeNewsletterPopup()"></div>
+<div class="nl-popup" id="nlPopup">
+  <button class="nl-close" onclick="closeNewsletterPopup()" aria-label="Close">✕</button>
+  <div class="nl-inner">
+    <p class="nl-eyebrow">The SUSTA edit</p>
+    <h2 class="nl-headline">Never miss<br>a new arrival.</h2>
+    <p class="nl-body">New brands, new products, curated edits — straight to your inbox. No noise, just the good stuff.</p>
+    <div class="nl-form" id="nlForm">
+      <input type="text"  id="nlName"  placeholder="Your name"  class="nl-input">
+      <input type="email" id="nlEmail" placeholder="Your email" class="nl-input">
+      <p class="nl-error" id="nlError"></p>
+      <button class="nl-submit" onclick="submitNewsletterPopup()">Join the list</button>
+    </div>
+    <div class="nl-success" id="nlSuccess" style="display:none">
+      <p class="nl-success-msg">You're in. ✦</p>
+      <p class="nl-success-sub">We'll be in touch soon.</p>
+    </div>
+    <button class="nl-skip" onclick="closeNewsletterPopup()">No thanks, I'll browse</button>
+  </div>
+</div>
 </body>
 </html>

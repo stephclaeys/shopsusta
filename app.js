@@ -2560,7 +2560,107 @@ function closeMobileEditSidebar(key) {
 }
 
 // ══════════════════════════════════════════
+
+// ══════════════════════════════════════════
+// NEWSLETTER POPUP
+// ══════════════════════════════════════════
+let _nlShown = false;
+
+function initNewsletterPopup() {
+  // Never show if user is signed in
+  if (currentUser) return;
+  // Don't show in the same session twice
+  if (sessionStorage.getItem('susta_nl_shown')) return;
+  // Delay 4 seconds
+  setTimeout(() => {
+    // Re-check sign-in state in case it resolved during delay
+    if (currentUser) return;
+    _nlShown = true;
+    sessionStorage.setItem('susta_nl_shown', '1');
+    document.getElementById('nlBackdrop').classList.add('open');
+    document.getElementById('nlPopup').classList.add('open');
+  }, 4000);
+}
+
+function closeNewsletterPopup() {
+  document.getElementById('nlBackdrop').classList.remove('open');
+  document.getElementById('nlPopup').classList.remove('open');
+}
+
+async function submitNewsletterPopup() {
+  const name  = document.getElementById('nlName').value.trim();
+  const email = document.getElementById('nlEmail').value.trim();
+  const errEl = document.getElementById('nlError');
+  errEl.textContent = '';
+  if (!name)  { errEl.textContent = 'Please enter your name.';  return; }
+  if (!email) { errEl.textContent = 'Please enter your email.'; return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.'; return;
+  }
+  const btn = document.querySelector('.nl-submit');
+  btn.textContent = 'Joining…'; btn.disabled = true;
+  try {
+    const { error } = await sb.from('subscribers').insert({ name, email });
+    if (error && error.code !== '23505') throw error; // 23505 = duplicate, still treat as success
+    document.getElementById('nlForm').style.display    = 'none';
+    document.getElementById('nlSuccess').style.display = 'block';
+    setTimeout(closeNewsletterPopup, 3000);
+  } catch(err) {
+    errEl.textContent = 'Something went wrong — please try again.';
+    btn.textContent = 'Join the list'; btn.disabled = false;
+  }
+}
+
 // INIT — restore session from Supabase
+// ══════════════════════════════════════════
+// NEWSLETTER POPUP
+// ══════════════════════════════════════════
+function showNewsletterPopup() {
+  if (currentUser) return; // never show to logged-in users
+  document.getElementById('nlBackdrop').classList.add('open');
+  document.getElementById('nlPopup').classList.add('open');
+}
+
+function closeNewsletterPopup() {
+  document.getElementById('nlBackdrop').classList.remove('open');
+  document.getElementById('nlPopup').classList.remove('open');
+}
+
+async function submitNewsletterPopup() {
+  const name  = document.getElementById('nlName').value.trim();
+  const email = document.getElementById('nlEmail').value.trim();
+  const errEl = document.getElementById('nlError');
+  const okEl  = document.getElementById('nlSuccess');
+  const btn   = document.getElementById('nlSubmitBtn');
+
+  errEl.classList.remove('visible');
+  okEl.classList.remove('visible');
+
+  if (!name)  { errEl.textContent = 'Please enter your name.';         errEl.classList.add('visible'); return; }
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.classList.add('visible'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.classList.add('visible'); return;
+  }
+
+  btn.textContent = 'Subscribing…'; btn.disabled = true;
+
+  try {
+    const { error } = await sb.from('subscribers').insert({ name, email });
+    if (error && error.code !== '23505') throw error; // ignore duplicate key
+    okEl.textContent = '✓ You're in! Welcome to the edit.';
+    okEl.classList.add('visible');
+    document.getElementById('nlName').value  = '';
+    document.getElementById('nlEmail').value = '';
+    document.querySelector('.nl-form').style.display = 'none';
+    setTimeout(closeNewsletterPopup, 2500);
+  } catch(err) {
+    errEl.textContent = 'Something went wrong — please try again.';
+    errEl.classList.add('visible');
+    btn.textContent = 'Subscribe →'; btn.disabled = false;
+  }
+}
+
 // ══════════════════════════════════════════
 (async () => {
   // Wrap entire init in try/catch — Supabase can throw uncloneable errors
@@ -2573,6 +2673,9 @@ function closeMobileEditSidebar(key) {
     }
   } catch(e) {}
 
+  // Trigger newsletter popup for non-signed-in visitors
+  initNewsletterPopup();
+
   // Load brand registry first, then products and edits
   await loadBrandRegistry();
   buildSidebarBrands();
@@ -2582,6 +2685,11 @@ function closeMobileEditSidebar(key) {
   initHomeDuo();
   await loadOccasions();
   await loadEdits();
+
+  // Newsletter popup — show after delay if not logged in
+  if (!currentUser) {
+    setTimeout(showNewsletterPopup, 4000);
+  }
 
   // Restore page from clean URL on load/refresh
   (function restoreFromURL() {
@@ -2633,6 +2741,7 @@ function closeMobileEditSidebar(key) {
       try {
         if (event === 'SIGNED_IN' && session?.user) {
           await _onSignIn(session.user);
+          closeNewsletterPopup();
         } else if (event === 'SIGNED_OUT') {
           currentUser = null; _likes = [];
           renderLikeStates(); updateLikesBadge();
@@ -2720,3 +2829,58 @@ document.addEventListener('click', e => {
     }
   });
 });
+// ══════════════════════════════════════════
+// NEWSLETTER POPUP
+// ══════════════════════════════════════════
+let _nlTimer = null;
+
+function openNlPopup() {
+  document.getElementById('nlBackdrop').classList.add('open');
+  document.getElementById('nlPopup').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeNlPopup() {
+  document.getElementById('nlBackdrop').classList.remove('open');
+  document.getElementById('nlPopup').classList.remove('open');
+  document.body.style.overflow = '';
+  if (_nlTimer) { clearTimeout(_nlTimer); _nlTimer = null; }
+}
+
+function initNlPopup() {
+  // Never show if user is already logged in
+  if (currentUser) return;
+  // 4 second delay
+  _nlTimer = setTimeout(() => {
+    // Double-check still not logged in after delay
+    if (currentUser) return;
+    openNlPopup();
+  }, 4000);
+}
+
+async function submitNlPopup() {
+  const name  = document.getElementById('nlName').value.trim();
+  const email = document.getElementById('nlEmail').value.trim().toLowerCase();
+  const errEl = document.getElementById('nlError');
+  const btn   = document.getElementById('nlSubmit');
+  errEl.textContent = '';
+
+  if (!name) { errEl.textContent = 'Please enter your name.'; return; }
+  if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
+    errEl.textContent = 'Please enter a valid email.'; return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Subscribing…';
+
+  try {
+    const { error } = await sb.from('subscribers').insert({ name, email });
+    if (error && error.code !== '23505') throw error; // ignore duplicate
+    // Show success
+    document.getElementById('nlForm').style.display = 'none';
+    document.getElementById('nlSuccess').style.display = 'block';
+    setTimeout(closeNlPopup, 2200);
+  } catch(err) {
+    errEl.textContent = 'Something went wrong. Please try again.';
+    btn.disabled = false; btn.textContent = 'Subscribe';
+  }
+}
