@@ -2648,7 +2648,7 @@ async function submitNewsletterPopup() {
   try {
     const { error } = await sb.from('subscribers').insert({ name, email });
     if (error && error.code !== '23505') throw error; // ignore duplicate key
-    okEl.textContent = '✓ You're in! Welcome to the edit.';
+    okEl.textContent = "✓ You're in! Welcome to the edit.";
     okEl.classList.add('visible');
     document.getElementById('nlName').value  = '';
     document.getElementById('nlEmail').value = '';
