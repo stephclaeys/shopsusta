@@ -295,9 +295,7 @@ nav {
   width: 100%; height: 100%; object-fit: cover; display: block;
   position: absolute; inset: 0;
 }
-.home-edit-slide img { transition: transform 6s ease; }
-.home-edit-slide.active img { transform: scale(1.04); }
-.home-edit-slide:not(.active) img { transform: scale(1.0); }
+.home-edit-slide img { transition: none; }
 .home-edit-label {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;
