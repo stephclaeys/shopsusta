@@ -265,7 +265,7 @@ nav {
 }
 .tagline-line1 {
   display: block; text-align: justify;
-  margin-bottom: -0.08em;
+  margin-bottom: -0.18em;
 }
 .tagline-line1::after { content: ''; display: inline-block; width: 100%; }
 .tagline-line2 { display: block; text-align: justify; }
