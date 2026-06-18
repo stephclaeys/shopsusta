@@ -249,21 +249,24 @@ nav {
 /* ── HOME TAGLINE BANNER ── */
 .home-tagline-banner {
   background: var(--warm-white);
-  padding: 4px 40px 0px;
+  padding: 18px 40px 18px;
   overflow: hidden;
 }
 .home-tagline-text {
   display: block;
   font-family: var(--serif);
-  font-size: clamp(52px, 9.5vw, 160px);
+  font-size: 8.6vw;
   font-weight: 600;
   color: var(--accent);
   letter-spacing: -0.03em;
-  line-height: 0.82;
+  line-height: 1;
   text-transform: uppercase;
   width: 100%;
 }
-.tagline-line1 { display: block; text-align: justify; }
+.tagline-line1 {
+  display: block; text-align: justify;
+  margin-bottom: 0.04em;
+}
 .tagline-line1::after { content: ''; display: inline-block; width: 100%; }
 .tagline-line2 { display: block; text-align: justify; }
 .tagline-line2::after { content: ''; display: inline-block; width: 100%; }
@@ -358,9 +361,9 @@ nav {
   color: var(--accent);
 }
 @media (max-width: 768px) {
-  .home-tagline-banner { padding: 8px 20px 4px; }
+  .home-tagline-banner { padding: 14px 20px 14px; }
   .home-tagline-text {
-    font-size: clamp(26px, 8vw, 52px);
+    font-size: 8.6vw;
     white-space: normal;
   }
   .home-trio-section {
