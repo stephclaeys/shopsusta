@@ -190,17 +190,18 @@
 ═══════════════════════════════════════ -->
 <div class="page active" id="page-home">
 
-  <!-- Hero Slider — populated dynamically from Supabase edits table -->
-  <div class="hero-slider" id="heroSlider">
-    <!-- slides injected by buildHomeSlider() in app.js -->
-    <!-- dots injected inside slider so they position correctly -->
-    <div class="slider-controls" id="sliderDots"></div>
+  <!-- Tagline Banner -->
+  <div class="home-tagline-banner">
+    <span class="home-tagline-text">
+      <span class="tagline-line1">sustainably made,</span>
+      <span class="tagline-line2">carefully curated</span>
+    </span>
   </div>
 
-  <!-- Just In / New Brand Arrivals -->
-  <div class="home-duo-section" id="homeDuoSection">
+  <!-- Three-col: Just In / Edits / New Brand Arrivals -->
+  <div class="home-trio-section" id="homeDuoSection">
     <!-- Left: Just In -->
-    <div class="home-duo-panel">
+    <div class="home-trio-panel">
       <div class="home-duo-header">
         <span class="home-duo-eyebrow">Just In</span>
         <span class="home-duo-shop-link" onclick="goShopNewest()">Shop Now</span>
@@ -210,10 +211,21 @@
           <div class="home-duo-placeholder"></div>
         </div>
       </div>
-
     </div>
+
+    <!-- Centre: Edits -->
+    <div class="home-trio-panel">
+      <div class="home-duo-header">
+        <span class="home-duo-eyebrow">Edits</span>
+        <span class="home-duo-shop-link" onclick="goShop('all')">Browse All</span>
+      </div>
+      <div class="home-edits-stack" id="homeEditsPanels">
+        <div class="home-duo-placeholder" style="aspect-ratio:4/5;"></div>
+      </div>
+    </div>
+
     <!-- Right: New Brand Arrivals -->
-    <div class="home-duo-panel">
+    <div class="home-trio-panel">
       <div class="home-duo-header">
         <span class="home-duo-eyebrow">New Brand Arrivals</span>
         <span class="home-duo-shop-link" onclick="goShopNewBrand()">Shop Now</span>
@@ -223,7 +235,6 @@
           <div class="home-duo-placeholder"></div>
         </div>
       </div>
-
     </div>
   </div>
 
