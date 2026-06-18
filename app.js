@@ -629,13 +629,17 @@ function buildHomeEditsPanels() {
 
   // Single crossfading box containing all edits as slides
   const slidesHtml = _edits.map((edit, i) => {
-    const imgHtml = edit.hero_image_url
-      ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
-      : '';
+    const mediaHtml = edit.hero_video_url
+      ? `<video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;">
+           <source src="${edit.hero_video_url}" type="video/mp4">
+         </video>`
+      : edit.hero_image_url
+        ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
+        : '';
     return `
       <div class="home-edit-slide${i === 0 ? ' active' : ''}"
            data-key="${edit.key}" onclick="showEditPage('${edit.key}')">
-        ${imgHtml}
+        ${mediaHtml}
         <div class="home-edit-label"><span>${edit.name}</span></div>
       </div>`;
   }).join('');
@@ -646,12 +650,21 @@ function buildHomeEditsPanels() {
   if (_edits.length > 1) {
     if (_homeEditsTimer) clearInterval(_homeEditsTimer);
     _homeEditsIdx = 0;
+    function activateSlide(idx) {
+      const slides = wrap.querySelectorAll('.home-edit-slide');
+      slides.forEach((s, i) => {
+        const isActive = i === idx;
+        s.classList.toggle('active', isActive);
+        const vid = s.querySelector('video');
+        if (vid) { if (isActive) vid.play(); else { vid.pause(); vid.currentTime = 0; } }
+      });
+    }
+    activateSlide(0);
     _homeEditsTimer = setInterval(() => {
       const slides = wrap.querySelectorAll('.home-edit-slide');
       if (!slides.length) return;
-      slides[_homeEditsIdx].classList.remove('active');
       _homeEditsIdx = (_homeEditsIdx + 1) % slides.length;
-      slides[_homeEditsIdx].classList.add('active');
+      activateSlide(_homeEditsIdx);
     }, 4000);
   }
 }
