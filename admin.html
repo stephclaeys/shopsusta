@@ -71,6 +71,7 @@ input, textarea, select { font-family: var(--sans); }
 .product-thumb-brand { font-size: 9px; color: rgba(255,255,255,0.6); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 3px; opacity: 0; transition: opacity 0.2s; }
 .product-thumb:hover .product-thumb-brand { opacity: 1; }
 .hidden-badge { position: absolute; top: 8px; left: 8px; background: var(--accent); color: #fff; font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; font-weight: 500; }
+.pinned-badge { position: absolute; top: 8px; right: 8px; background: #2a5c3f; color: #a8d5b5; font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; font-weight: 500; }
 .no-img-placeholder { width: 100%; height: 100%; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
 .no-img-placeholder span { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); text-align: center; padding: 0 8px; }
 
@@ -496,6 +497,7 @@ function renderProductGrid(products) {
         <p class="product-thumb-name">${escHtml(p.name)}</p>
       </div>
       ${p.visible === false ? '<span class="hidden-badge">Hidden</span>' : ''}
+      ${p.sort_order != null ? `<span class="pinned-badge">#${p.sort_order}</span>` : ''}
     </div>`).join('');
   grid.onclick = function(e) {
     const thumb = e.target.closest('.product-thumb');
@@ -703,6 +705,10 @@ function renderDrawerBody(p) {
       </div>
     </div>
     <div class="field-group">
+      <span class="field-label">Pin order <span style="color:var(--text3);font-size:9px;text-transform:none;letter-spacing:0;font-weight:400">(blank = unpinned, shows newest-first)</span></span>
+      <input class="field-input" type="number" min="1" value="${p.sort_order != null ? p.sort_order : ''}" oninput="setPending('sort_order', this.value === '' ? null : parseInt(this.value))" placeholder="e.g. 1, 2, 3…">
+    </div>
+    <div class="field-group">
       <span class="field-label">Price</span>
       <input class="field-input" type="text" value="${escHtml(p.price || '')}" oninput="setPending('price', this.value)" placeholder="e.g. $178">
     </div>
@@ -778,6 +784,7 @@ async function saveProduct() {
     price: _pendingChanges.price, category: _pendingChanges.category,
     style: _pendingChanges.style, colour: _pendingChanges.colour,
     occasion: _pendingChanges.occasion, tag: _pendingChanges.tag, tag_type: _pendingChanges.tag_type,
+    sort_order: _pendingChanges.sort_order !== undefined ? _pendingChanges.sort_order : null,
   };
   const { error } = await sb.from('products').update(updates).eq('id', _editingId);
   if (error) {

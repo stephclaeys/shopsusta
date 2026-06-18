@@ -383,17 +383,19 @@ async function initShopCount() {
   grid.innerHTML = '<p style="padding:40px;color:var(--taupe);font-size:12px;letter-spacing:0.08em">Loading…</p>';
 
   try {
-    // Always query by id — reliable fallback, click_count column may not exist yet
+    // Order by sort_order ascending (NULLs last), then id descending (newest first) as tiebreaker
     let data = null;
     try {
-      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('click_count', { ascending: false });
+      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true')
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('id', { ascending: false });
       if (!r1.error && r1.data) data = r1.data;
     } catch(e) {}
 
-    // Fallback to ordering by id if click_count failed or returned nothing
+    // Fallback to id descending if sort_order query failed
     if (!data) {
       try {
-        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id');
+        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id', { ascending: false });
         if (!r2.error && r2.data) data = r2.data;
       } catch(e) {}
     }
@@ -408,11 +410,13 @@ async function initShopCount() {
       return;
     }
 
-    // Tag each card with load order for sort-by-recommended
+    // Tag each card with load order and sort_order for sort-by-recommended
     _allProducts = data;
     grid.innerHTML = data.map(renderCard).join('');
     grid.querySelectorAll('.product-card').forEach((card, i) => {
       card.dataset.loadorder = i;
+      const p = data[i];
+      card.dataset.sortorder = (p && p.sort_order != null) ? p.sort_order : '';
     });
     _productsLoaded = true;
     renderLikeStates();
@@ -1465,7 +1469,13 @@ function sortProducts(mode, btn) {
     if (mode === 'low')    return cardPrice(a) - cardPrice(b);
     if (mode === 'high')   return cardPrice(b) - cardPrice(a);
     if (mode === 'newest') return parseInt(b.dataset.id||0) - parseInt(a.dataset.id||0);
-    return parseInt(a.dataset.loadorder||0) - parseInt(b.dataset.loadorder||0);
+    // recommended: sort_order asc (NULLs last), then id desc
+    const aPin = a.dataset.sortorder !== '' ? parseInt(a.dataset.sortorder) : null;
+    const bPin = b.dataset.sortorder !== '' ? parseInt(b.dataset.sortorder) : null;
+    if (aPin !== null && bPin === null) return -1;
+    if (aPin === null && bPin !== null) return 1;
+    if (aPin !== null && bPin !== null) return aPin - bPin;
+    return parseInt(b.dataset.id||0) - parseInt(a.dataset.id||0);
   });
 
   visible.forEach(c => grid.appendChild(c));
