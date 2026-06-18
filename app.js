@@ -351,7 +351,7 @@ function renderCard(p) {
          data-name="${escAttr(p.name)}" data-brandlabel="${escAttr(brandLabel)}"
          data-price="${escAttr(displayPrice)}" data-material="${escAttr(p.material || '')}"
          data-img="${escAttr(p.image_url || '')}" data-url="${escAttr(p.shop_url)}"
-         data-subcat="${escAttr(p.subcategory || '')}" data-occasion="${escAttr(p.occasion || '')}" data-color="${escAttr(p.color || '')}">
+         data-subcat="${escAttr(p.subcategory || '')}" data-occasion="${escAttr(p.occasion || '')}" data-color="${escAttr(p.color || '')}" data-tier="${p.sort_order != null ? p.sort_order : ''}">
       <div class="product-img">
         ${imgHtml}
         <div class="product-img-overlay"></div>
@@ -408,11 +408,33 @@ async function initShopCount() {
       return;
     }
 
-    // Tag each card with load order for sort-by-recommended
+    // Tag each card with tier + session-stable shuffle index for recommended sort
     _allProducts = data;
     grid.innerHTML = data.map(renderCard).join('');
-    grid.querySelectorAll('.product-card').forEach((card, i) => {
-      card.dataset.loadorder = i;
+
+    // Session-stable shuffle: seed from sessionStorage, consistent within tab
+    let _sessionSeed = sessionStorage.getItem('susta_shuffle_seed');
+    if (!_sessionSeed) {
+      _sessionSeed = Math.random().toString(36).slice(2);
+      sessionStorage.setItem('susta_shuffle_seed', _sessionSeed);
+    }
+    function seededRand(seed, i) {
+      // Simple deterministic hash: seed + index → 0..1
+      let h = 0;
+      const s = seed + i;
+      for (let j = 0; j < s.length; j++) {
+        h = (Math.imul(31, h) + s.charCodeAt(j)) | 0;
+      }
+      return (h >>> 0) / 4294967296;
+    }
+
+    // Assign a stable random float within each tier bucket as loadorder
+    const cards = Array.from(grid.querySelectorAll('.product-card'));
+    cards.forEach((card, i) => {
+      const tier = card.dataset.tier !== '' ? parseInt(card.dataset.tier) : 5;
+      const rand = seededRand(_sessionSeed, i);
+      // loadorder = tier * 1000 + random offset (0–999), so tiers never mix
+      card.dataset.loadorder = tier * 1000 + Math.floor(rand * 1000);
     });
     _productsLoaded = true;
     renderLikeStates();
@@ -535,7 +557,7 @@ async function loadEdits() {
     .order('sort_order');
   if (error || !data) return;
   _edits = data;
-  buildHomeEditsPanels();
+  buildHomeSlider();
   buildMegaMenuEdits();
   buildEditPages();
   buildSidebarEdits();
@@ -601,29 +623,49 @@ function goShopOccasion(name) {
 }
 
 // ── Home slider ───────────────────────────
-function buildHomeEditsPanels() {
-  const wrap = document.getElementById('homeEditsPanels');
-  if (!wrap) return;
-  if (!_edits.length) {
-    // No edits yet — show a neutral placeholder
-    wrap.innerHTML = '<div class="home-duo-placeholder" style="aspect-ratio:4/5;"></div>';
-    return;
-  }
-  // Show up to 3 edits as stacked boxes
-  const toShow = _edits.slice(0, 3);
-  wrap.innerHTML = toShow.map(edit => {
-    const imgHtml = edit.hero_image_url
-      ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
-      : '';
+function buildHomeSlider() {
+  const slider   = document.getElementById('heroSlider');
+  const dotsWrap = document.getElementById('sliderDots');
+  if (!slider || !_edits.length) return;
+
+  // Build and inject slides before the dots container
+  const slidesHtml = _edits.map((edit, i) => {
+    const mediaHtml = edit.hero_video_url
+      ? `<div class="slide-video-wrap">
+           <video autoplay muted loop playsinline>
+             <source src="${edit.hero_video_url}" type="video/mp4">
+           </video>
+         </div>`
+      : `<div class="slide-video-wrap" style="background:#1a1210;">
+           <img src="${edit.hero_image_url || ''}" style="width:100%;height:100%;object-fit:cover;" alt="${edit.name}">
+         </div>`;
     return `
-      <div class="home-edit-box" style="aspect-ratio:${toShow.length === 1 ? '4/5' : toShow.length === 2 ? '16/9' : '21/9'};"
-           onclick="showEditPage('${edit.key}')">
-        ${imgHtml}
-        <div class="home-edit-label">
-          <span>${edit.name}</span>
+      <div class="slide slide-edit${i === 0 ? ' active' : ''}" onclick="showEditPage('${edit.key}')">
+        ${mediaHtml}
+        <div class="slide-video-overlay">
+          <span class="slide-eyebrow">The Edit</span>
+          <h2 class="slide-headline">${edit.name}</h2>
         </div>
       </div>`;
   }).join('');
+
+  dotsWrap.insertAdjacentHTML('beforebegin', slidesHtml);
+
+  // Inject nav arrows before the dots
+  dotsWrap.insertAdjacentHTML('beforebegin', `
+    <button class="slider-arrow slider-prev" onclick="slideBy(-1);event.stopPropagation()">
+      <svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <button class="slider-arrow slider-next" onclick="slideBy(1);event.stopPropagation()">
+      <svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>
+    </button>`);
+
+  // Build dots
+  dotsWrap.innerHTML = _edits.map((_, i) =>
+    `<button class="slider-dot${i === 0 ? ' active' : ''}" onclick="goToSlide(${i})"></button>`
+  ).join('');
+
+  initSlider();
 }
 
 // ── Mega menu edits column ────────────────
