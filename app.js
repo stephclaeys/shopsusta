@@ -616,6 +616,9 @@ function goShopOccasion(name) {
 }
 
 // ── Home slider ───────────────────────────
+let _homeEditsTimer = null;
+let _homeEditsIdx = 0;
+
 function buildHomeEditsPanels() {
   const wrap = document.getElementById('homeEditsPanels');
   if (!wrap) return;
@@ -623,18 +626,34 @@ function buildHomeEditsPanels() {
     wrap.innerHTML = '<div class="home-duo-placeholder" style="aspect-ratio:4/5;"></div>';
     return;
   }
-  const toShow = _edits.slice(0, 3);
-  wrap.innerHTML = toShow.map(edit => {
+
+  // Single crossfading box containing all edits as slides
+  const slidesHtml = _edits.map((edit, i) => {
     const imgHtml = edit.hero_image_url
       ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
       : '';
-    const ratio = toShow.length === 1 ? '4/5' : toShow.length === 2 ? '16/9' : '21/9';
     return `
-      <div class="home-edit-box" style="aspect-ratio:${ratio};" onclick="showEditPage('${edit.key}')">
+      <div class="home-edit-slide${i === 0 ? ' active' : ''}"
+           data-key="${edit.key}" onclick="showEditPage('${edit.key}')">
         ${imgHtml}
         <div class="home-edit-label"><span>${edit.name}</span></div>
       </div>`;
   }).join('');
+
+  wrap.innerHTML = `<div class="home-edit-box">${slidesHtml}</div>`;
+
+  // Only start timer if more than one edit
+  if (_edits.length > 1) {
+    if (_homeEditsTimer) clearInterval(_homeEditsTimer);
+    _homeEditsIdx = 0;
+    _homeEditsTimer = setInterval(() => {
+      const slides = wrap.querySelectorAll('.home-edit-slide');
+      if (!slides.length) return;
+      slides[_homeEditsIdx].classList.remove('active');
+      _homeEditsIdx = (_homeEditsIdx + 1) % slides.length;
+      slides[_homeEditsIdx].classList.add('active');
+    }, 4000);
+  }
 }
 
 // ── Mega menu edits column ────────────────
