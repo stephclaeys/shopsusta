@@ -246,6 +246,65 @@ nav {
 
 
 /* ── HOME DUO (Just In / New Brand) ── */
+/* ── HOME TAGLINE BANNER ── */
+.home-tagline-banner {
+  background: var(--warm-white);
+  padding: 52px 48px 44px;
+  border-bottom: 0.5px solid var(--stone);
+  overflow: hidden;
+}
+.home-tagline-text {
+  display: block;
+  font-family: var(--serif);
+  font-size: clamp(36px, 5.2vw, 80px);
+  font-weight: 300;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  white-space: nowrap;
+  width: 100%;
+  text-align: left;
+}
+.tagline-line1, .tagline-line2 { display: inline; }
+
+/* ── HOME TRIO SECTION ── */
+.home-trio-section {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2px;
+  background: var(--stone);
+  padding: 0;
+}
+.home-trio-panel {
+  display: flex; flex-direction: column;
+  background: var(--warm-white);
+  padding: 32px 28px 36px;
+}
+.home-edits-stack {
+  display: flex; flex-direction: column; gap: 2px;
+  flex: 1;
+}
+.home-edits-stack .home-edit-box {
+  flex: 1; min-height: 0;
+  position: relative; overflow: hidden; cursor: pointer;
+  background: #1a1210;
+}
+.home-edits-stack .home-edit-box img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform 0.6s ease;
+}
+.home-edits-stack .home-edit-box:hover img { transform: scale(1.04); }
+.home-edit-label {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 14px 16px;
+  background: linear-gradient(transparent 40%, rgba(15,13,12,0.65));
+  pointer-events: none;
+}
+.home-edit-label span {
+  font-family: var(--serif); font-size: 15px; font-weight: 300;
+  color: #fff; letter-spacing: 0.02em; line-height: 1.2;
+}
+
+/* Legacy — keep for any references */
 .home-duo-section {
   display: grid; grid-template-columns: 1fr 1fr; gap: 28px;
   background: var(--warm-white);
@@ -288,6 +347,22 @@ nav {
   font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--accent);
 }
+@media (max-width: 768px) {
+  .home-tagline-text {
+    white-space: normal;
+    font-size: clamp(32px, 8vw, 52px);
+  }
+  .tagline-line1 { display: block; }
+  .tagline-line2 { display: block; }
+  .home-tagline-banner { padding: 36px 24px 30px; }
+  .home-trio-section { grid-template-columns: 1fr; gap: 0; background: none; }
+  /* Edits first on mobile — use order */
+  .home-trio-panel:nth-child(1) { order: 2; }
+  .home-trio-panel:nth-child(2) { order: 1; border-bottom: 0.5px solid var(--stone); }
+  .home-trio-panel:nth-child(3) { order: 3; }
+  .home-trio-panel { padding: 28px 20px 32px; border-bottom: 0.5px solid var(--stone); }
+}
+
 @media (max-width: 480px) {
   .home-duo-section { grid-template-columns: 1fr; padding: 40px 20px; gap: 48px; }
 }

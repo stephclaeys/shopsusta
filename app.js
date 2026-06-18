@@ -383,19 +383,17 @@ async function initShopCount() {
   grid.innerHTML = '<p style="padding:40px;color:var(--taupe);font-size:12px;letter-spacing:0.08em">Loading…</p>';
 
   try {
-    // Order by sort_order ascending (NULLs last), then id descending (newest first) as tiebreaker
+    // Always query by id — reliable fallback, click_count column may not exist yet
     let data = null;
     try {
-      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true')
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('id', { ascending: false });
+      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('click_count', { ascending: false });
       if (!r1.error && r1.data) data = r1.data;
     } catch(e) {}
 
-    // Fallback to id descending if sort_order query failed
+    // Fallback to ordering by id if click_count failed or returned nothing
     if (!data) {
       try {
-        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id', { ascending: false });
+        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id');
         if (!r2.error && r2.data) data = r2.data;
       } catch(e) {}
     }
@@ -410,13 +408,11 @@ async function initShopCount() {
       return;
     }
 
-    // Tag each card with load order and sort_order for sort-by-recommended
+    // Tag each card with load order for sort-by-recommended
     _allProducts = data;
     grid.innerHTML = data.map(renderCard).join('');
     grid.querySelectorAll('.product-card').forEach((card, i) => {
       card.dataset.loadorder = i;
-      const p = data[i];
-      card.dataset.sortorder = (p && p.sort_order != null) ? p.sort_order : '';
     });
     _productsLoaded = true;
     renderLikeStates();
@@ -539,7 +535,7 @@ async function loadEdits() {
     .order('sort_order');
   if (error || !data) return;
   _edits = data;
-  buildHomeSlider();
+  buildHomeEditsPanels();
   buildMegaMenuEdits();
   buildEditPages();
   buildSidebarEdits();
@@ -605,49 +601,29 @@ function goShopOccasion(name) {
 }
 
 // ── Home slider ───────────────────────────
-function buildHomeSlider() {
-  const slider   = document.getElementById('heroSlider');
-  const dotsWrap = document.getElementById('sliderDots');
-  if (!slider || !_edits.length) return;
-
-  // Build and inject slides before the dots container
-  const slidesHtml = _edits.map((edit, i) => {
-    const mediaHtml = edit.hero_video_url
-      ? `<div class="slide-video-wrap">
-           <video autoplay muted loop playsinline>
-             <source src="${edit.hero_video_url}" type="video/mp4">
-           </video>
-         </div>`
-      : `<div class="slide-video-wrap" style="background:#1a1210;">
-           <img src="${edit.hero_image_url || ''}" style="width:100%;height:100%;object-fit:cover;" alt="${edit.name}">
-         </div>`;
+function buildHomeEditsPanels() {
+  const wrap = document.getElementById('homeEditsPanels');
+  if (!wrap) return;
+  if (!_edits.length) {
+    // No edits yet — show a neutral placeholder
+    wrap.innerHTML = '<div class="home-duo-placeholder" style="aspect-ratio:4/5;"></div>';
+    return;
+  }
+  // Show up to 3 edits as stacked boxes
+  const toShow = _edits.slice(0, 3);
+  wrap.innerHTML = toShow.map(edit => {
+    const imgHtml = edit.hero_image_url
+      ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
+      : '';
     return `
-      <div class="slide slide-edit${i === 0 ? ' active' : ''}" onclick="showEditPage('${edit.key}')">
-        ${mediaHtml}
-        <div class="slide-video-overlay">
-          <span class="slide-eyebrow">The Edit</span>
-          <h2 class="slide-headline">${edit.name}</h2>
+      <div class="home-edit-box" style="aspect-ratio:${toShow.length === 1 ? '4/5' : toShow.length === 2 ? '16/9' : '21/9'};"
+           onclick="showEditPage('${edit.key}')">
+        ${imgHtml}
+        <div class="home-edit-label">
+          <span>${edit.name}</span>
         </div>
       </div>`;
   }).join('');
-
-  dotsWrap.insertAdjacentHTML('beforebegin', slidesHtml);
-
-  // Inject nav arrows before the dots
-  dotsWrap.insertAdjacentHTML('beforebegin', `
-    <button class="slider-arrow slider-prev" onclick="slideBy(-1);event.stopPropagation()">
-      <svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>
-    </button>
-    <button class="slider-arrow slider-next" onclick="slideBy(1);event.stopPropagation()">
-      <svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>
-    </button>`);
-
-  // Build dots
-  dotsWrap.innerHTML = _edits.map((_, i) =>
-    `<button class="slider-dot${i === 0 ? ' active' : ''}" onclick="goToSlide(${i})"></button>`
-  ).join('');
-
-  initSlider();
 }
 
 // ── Mega menu edits column ────────────────
@@ -1469,13 +1445,7 @@ function sortProducts(mode, btn) {
     if (mode === 'low')    return cardPrice(a) - cardPrice(b);
     if (mode === 'high')   return cardPrice(b) - cardPrice(a);
     if (mode === 'newest') return parseInt(b.dataset.id||0) - parseInt(a.dataset.id||0);
-    // recommended: sort_order asc (NULLs last), then id desc
-    const aPin = a.dataset.sortorder !== '' ? parseInt(a.dataset.sortorder) : null;
-    const bPin = b.dataset.sortorder !== '' ? parseInt(b.dataset.sortorder) : null;
-    if (aPin !== null && bPin === null) return -1;
-    if (aPin === null && bPin !== null) return 1;
-    if (aPin !== null && bPin !== null) return aPin - bPin;
-    return parseInt(b.dataset.id||0) - parseInt(a.dataset.id||0);
+    return parseInt(a.dataset.loadorder||0) - parseInt(b.dataset.loadorder||0);
   });
 
   visible.forEach(c => grid.appendChild(c));
