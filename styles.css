@@ -259,13 +259,13 @@ nav {
   font-weight: 600;
   color: var(--accent);
   letter-spacing: -0.03em;
-  line-height: 0.82;
+  line-height: 0.72;
   text-transform: uppercase;
   width: 100%;
 }
 .tagline-line1 {
   display: block; text-align: justify;
-  margin-bottom: 0;
+  margin-bottom: -0.08em;
 }
 .tagline-line1::after { content: ''; display: inline-block; width: 100%; }
 .tagline-line2 { display: block; text-align: justify; }
@@ -1343,8 +1343,8 @@ footer { padding: 48px 40px 32px; border-top: 0.5px solid var(--stone); backgrou
   color: var(--accent); margin-bottom: 14px; font-weight: 500;
 }
 .nl-headline {
-  font-family: var(--serif); font-size: 42px; font-weight: 300;
-  line-height: 1.05; color: var(--dark); margin-bottom: 14px;
+  font-family: var(--serif); font-size: 42px; font-weight: 600;
+  line-height: 1.05; color: var(--accent); margin-bottom: 14px;
 }
 .nl-body {
   font-size: 12px; color: var(--taupe); line-height: 1.85;
