@@ -383,17 +383,19 @@ async function initShopCount() {
   grid.innerHTML = '<p style="padding:40px;color:var(--taupe);font-size:12px;letter-spacing:0.08em">Loading…</p>';
 
   try {
-    // Always query by id — reliable fallback, click_count column may not exist yet
+    // Order by sort_order asc (NULLs last), then id desc (newest first)
     let data = null;
     try {
-      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('click_count', { ascending: false });
+      const r1 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true')
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('id', { ascending: false });
       if (!r1.error && r1.data) data = r1.data;
     } catch(e) {}
 
-    // Fallback to ordering by id if click_count failed or returned nothing
+    // Fallback to id descending
     if (!data) {
       try {
-        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id');
+        const r2 = await sb.from('products').select('*').or('visible.is.null,visible.eq.true').order('id', { ascending: false });
         if (!r2.error && r2.data) data = r2.data;
       } catch(e) {}
     }
@@ -408,33 +410,24 @@ async function initShopCount() {
       return;
     }
 
-    // Tag each card with tier + session-stable shuffle index for recommended sort
+    // Tag each card with tier + session-stable shuffle index
     _allProducts = data;
     grid.innerHTML = data.map(renderCard).join('');
 
-    // Session-stable shuffle: seed from sessionStorage, consistent within tab
     let _sessionSeed = sessionStorage.getItem('susta_shuffle_seed');
     if (!_sessionSeed) {
       _sessionSeed = Math.random().toString(36).slice(2);
       sessionStorage.setItem('susta_shuffle_seed', _sessionSeed);
     }
     function seededRand(seed, i) {
-      // Simple deterministic hash: seed + index → 0..1
       let h = 0;
       const s = seed + i;
-      for (let j = 0; j < s.length; j++) {
-        h = (Math.imul(31, h) + s.charCodeAt(j)) | 0;
-      }
+      for (let j = 0; j < s.length; j++) h = (Math.imul(31, h) + s.charCodeAt(j)) | 0;
       return (h >>> 0) / 4294967296;
     }
-
-    // Assign a stable random float within each tier bucket as loadorder
-    const cards = Array.from(grid.querySelectorAll('.product-card'));
-    cards.forEach((card, i) => {
+    Array.from(grid.querySelectorAll('.product-card')).forEach((card, i) => {
       const tier = card.dataset.tier !== '' ? parseInt(card.dataset.tier) : 5;
-      const rand = seededRand(_sessionSeed, i);
-      // loadorder = tier * 1000 + random offset (0–999), so tiers never mix
-      card.dataset.loadorder = tier * 1000 + Math.floor(rand * 1000);
+      card.dataset.loadorder = tier * 1000 + Math.floor(seededRand(_sessionSeed, i) * 1000);
     });
     _productsLoaded = true;
     renderLikeStates();
@@ -557,7 +550,7 @@ async function loadEdits() {
     .order('sort_order');
   if (error || !data) return;
   _edits = data;
-  buildHomeSlider();
+  buildHomeEditsPanels();
   buildMegaMenuEdits();
   buildEditPages();
   buildSidebarEdits();
@@ -623,49 +616,25 @@ function goShopOccasion(name) {
 }
 
 // ── Home slider ───────────────────────────
-function buildHomeSlider() {
-  const slider   = document.getElementById('heroSlider');
-  const dotsWrap = document.getElementById('sliderDots');
-  if (!slider || !_edits.length) return;
-
-  // Build and inject slides before the dots container
-  const slidesHtml = _edits.map((edit, i) => {
-    const mediaHtml = edit.hero_video_url
-      ? `<div class="slide-video-wrap">
-           <video autoplay muted loop playsinline>
-             <source src="${edit.hero_video_url}" type="video/mp4">
-           </video>
-         </div>`
-      : `<div class="slide-video-wrap" style="background:#1a1210;">
-           <img src="${edit.hero_image_url || ''}" style="width:100%;height:100%;object-fit:cover;" alt="${edit.name}">
-         </div>`;
+function buildHomeEditsPanels() {
+  const wrap = document.getElementById('homeEditsPanels');
+  if (!wrap) return;
+  if (!_edits.length) {
+    wrap.innerHTML = '<div class="home-duo-placeholder" style="aspect-ratio:4/5;"></div>';
+    return;
+  }
+  const toShow = _edits.slice(0, 3);
+  wrap.innerHTML = toShow.map(edit => {
+    const imgHtml = edit.hero_image_url
+      ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
+      : '';
+    const ratio = toShow.length === 1 ? '4/5' : toShow.length === 2 ? '16/9' : '21/9';
     return `
-      <div class="slide slide-edit${i === 0 ? ' active' : ''}" onclick="showEditPage('${edit.key}')">
-        ${mediaHtml}
-        <div class="slide-video-overlay">
-          <span class="slide-eyebrow">The Edit</span>
-          <h2 class="slide-headline">${edit.name}</h2>
-        </div>
+      <div class="home-edit-box" style="aspect-ratio:${ratio};" onclick="showEditPage('${edit.key}')">
+        ${imgHtml}
+        <div class="home-edit-label"><span>${edit.name}</span></div>
       </div>`;
   }).join('');
-
-  dotsWrap.insertAdjacentHTML('beforebegin', slidesHtml);
-
-  // Inject nav arrows before the dots
-  dotsWrap.insertAdjacentHTML('beforebegin', `
-    <button class="slider-arrow slider-prev" onclick="slideBy(-1);event.stopPropagation()">
-      <svg viewBox="0 0 24 24"><polyline points="15,18 9,12 15,6"/></svg>
-    </button>
-    <button class="slider-arrow slider-next" onclick="slideBy(1);event.stopPropagation()">
-      <svg viewBox="0 0 24 24"><polyline points="9,18 15,12 9,6"/></svg>
-    </button>`);
-
-  // Build dots
-  dotsWrap.innerHTML = _edits.map((_, i) =>
-    `<button class="slider-dot${i === 0 ? ' active' : ''}" onclick="goToSlide(${i})"></button>`
-  ).join('');
-
-  initSlider();
 }
 
 // ── Mega menu edits column ────────────────
@@ -734,7 +703,7 @@ function buildEditPages() {
 
           <div>
             <div class="filter-section-header" onclick="toggleSidebarSection(this)">
-              <span class="filter-section-label">Colour</span>
+              <span class="filter-section-label">Color</span>
               <svg class="filter-section-arrow" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
             </div>
             <div class="filter-section-body" style="max-height:220px">
@@ -1487,7 +1456,8 @@ function sortProducts(mode, btn) {
     if (mode === 'low')    return cardPrice(a) - cardPrice(b);
     if (mode === 'high')   return cardPrice(b) - cardPrice(a);
     if (mode === 'newest') return parseInt(b.dataset.id||0) - parseInt(a.dataset.id||0);
-    return parseInt(a.dataset.loadorder||0) - parseInt(b.dataset.loadorder||0);
+    // recommended: tier 1–4 shuffled within tier, untiered last
+    return parseInt(a.dataset.loadorder||9999) - parseInt(b.dataset.loadorder||9999);
   });
 
   visible.forEach(c => grid.appendChild(c));
