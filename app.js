@@ -637,14 +637,14 @@ function buildHomeEditsPanels() {
         ? `<img src="${edit.hero_image_url}" alt="${edit.name}" loading="lazy">`
         : '';
     return `
-      <div class="home-edit-slide${i === 0 ? ' active' : ''}"
-           data-key="${edit.key}" onclick="showEditPage('${edit.key}')">
+      <div class="home-edit-slide${i === 0 ? ' active' : ''}" data-key="${edit.key}">
         ${mediaHtml}
         <div class="home-edit-label"><span>${edit.name}</span></div>
       </div>`;
   }).join('');
 
-  wrap.innerHTML = `<div class="home-edit-box">${slidesHtml}</div>`;
+  // Click handler on box reads whichever slide is currently active
+  wrap.innerHTML = `<div class="home-edit-box" onclick="var s=this.querySelector('.home-edit-slide.active');if(s)showEditPage(s.dataset.key)">${slidesHtml}</div>`;
 
   // Only start timer if more than one edit
   if (_edits.length > 1) {
